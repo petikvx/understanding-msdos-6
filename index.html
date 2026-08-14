@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comprendre MS-DOS 6 / Understanding MS-DOS 6</title>
+  <meta name="description" content="Guide bilingue du code source de MS-DOS 6. Ouvrir le site dans site/.">
+  <link rel="canonical" href="site/index.html">
+  <meta http-equiv="refresh" content="6; url=site/index.html">
+  <link rel="stylesheet" href="site/css/style.css">
+  <style>
+    .gate { max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+    .gate h1 { font-family: var(--font-serif); font-weight: 500; line-height: 1.25; margin: 0.35em 0 0.6em; }
+    .gate .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.75rem 0 2.5rem; }
+    .gate .btn {
+      display: inline-block; padding: 0.7rem 1.15rem; border-radius: 8px;
+      background: var(--accent); color: #fffdf8; text-decoration: none; font-weight: 600;
+    }
+    .gate .btn--ghost {
+      background: transparent; color: var(--ink); border: 1px solid var(--line);
+    }
+    html.lang-en .gate .btn { letter-spacing: 0.01em; }
+    .gate ol { padding-left: 1.2rem; }
+    .gate li { margin: 0.35em 0; }
+    .gate .hint { color: var(--muted); font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="site/index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="site/index.html">
+          <span data-lang="fr">Le guide</span>
+          <span data-lang="en">The guide</span>
+        </a>
+        <a href="site/fat.html">FAT</a>
+        <a href="site/command.html">COMMAND</a>
+        <a href="README.md">README</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="gate">
+    <p class="kicker">MS-DOS 6 · 1991–1993</p>
+    <h1>
+      <span data-lang="fr">Le système d’exploitation, lu depuis son code</span>
+      <span data-lang="en">The operating system, read from its source</span>
+    </h1>
+    <p class="lede" data-lang="fr">
+      Quarante-quatre articles, trois profondeurs, deux langues.
+      Le guide vit dans <code>site/</code>. Cette page n’est que la porte.
+      Redirection automatique dans quelques secondes.
+    </p>
+    <p class="lede" data-lang="en">
+      Forty-four articles, three depths, two languages.
+      The handbook lives in <code>site/</code>. This page is only the door.
+      Automatic redirect in a few seconds.
+    </p>
+
+    <p class="actions">
+      <a class="btn" href="site/index.html">
+        <span data-lang="fr">Entrer dans le guide</span>
+        <span data-lang="en">Enter the guide</span>
+      </a>
+      <a class="btn btn--ghost" href="site/boot.html">
+        <span data-lang="fr">Commencer par l’amorçage</span>
+        <span data-lang="en">Start at boot</span>
+      </a>
+    </p>
+
+    <h2 data-lang="fr">Sept sagas</h2>
+    <h2 data-lang="en">Seven sagas</h2>
+    <ol>
+      <li><a href="site/boot.html"><span data-lang="fr">Du courant à l’invite</span><span data-lang="en">From power-on to the prompt</span></a></li>
+      <li><a href="site/fat.html"><span data-lang="fr">Noyau au quotidien</span><span data-lang="en">Everyday kernel</span></a></li>
+      <li><a href="site/fdisk.html"><span data-lang="fr">Outils disque</span><span data-lang="en">Disk tools</span></a></li>
+      <li><a href="site/emm386.html"><span data-lang="fr">Au-dessus et en dessous du noyau</span><span data-lang="en">Above and below the kernel</span></a></li>
+      <li><a href="site/int24.html"><span data-lang="fr">Services et compatibilité</span><span data-lang="en">Services and compatibility</span></a></li>
+      <li><a href="site/ansi.html"><span data-lang="fr">Utilitaires et coquille</span><span data-lang="en">Utilities and the shell</span></a></li>
+      <li><a href="site/xcopy.html"><span data-lang="fr">La boîte cmd/ jusqu’au bout</span><span data-lang="en">The cmd/ box, emptied</span></a></li>
+    </ol>
+
+    <p class="hint" data-lang="fr">
+      Sources dans <code>ms-dos-6-source-code/</code>.
+      Détail du dépôt et des conventions : <a href="README.md">README.md</a>.
+    </p>
+    <p class="hint" data-lang="en">
+      Sources live in <code>ms-dos-6-source-code/</code>.
+      Repo layout and conventions: <a href="README.md">README.md</a>.
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Textes pédagogiques originaux. Extraits issus du code source MS-DOS&nbsp;6
+        (Microsoft Confidential, © Microsoft Corporation 1991).
+      </p>
+      <p data-lang="en">
+        Original explanatory text. Excerpts from the MS-DOS&nbsp;6 source
+        (Microsoft Confidential, © Microsoft Corporation 1991).
+      </p>
+    </div>
+  </footer>
+  <script src="site/js/app.js"></script>
+  <script>
+    window.setTimeout(function () {
+      window.location.replace("site/index.html");
+    }, 5500);
+  </script>
+</body>
+</html>
