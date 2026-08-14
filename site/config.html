@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CONFIG.SYS — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="boot.html">Boot</a>
+        <a href="config.html" aria-current="page">CONFIG</a>
+        <a href="himem.html">HIMEM</a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="command.html">COMMAND</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#doconf">doconf</a></li>
+        <li><a href="#device">DEVICE=</a></li>
+        <li><a href="#doshi">DOS=HIGH · UMB</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">bios/sysconf.asm · sysinit1.asm</p>
+        <h1>CONFIG.SYS</h1>
+        <p class="lede" data-lang="fr">Le fichier que SYSINIT lit pour fabriquer <em>votre</em> DOS : combien de SFT (<code>FILES=</code>), quels pilotes, le DOS en HMA ou non. Ce n’est pas COMMAND.COM qui le lit — le noyau n’est même pas encore « fini ».</p>
+        <p class="lede" data-lang="en">The file SYSINIT reads to build <em>your</em> DOS: how many SFTs (<code>FILES=</code>), which drivers, DOS in the HMA or not. COMMAND.COM does not read it — the kernel is not even “finished” yet.</p>
+      </header>
+
+      <section class="topic" id="doconf">
+        <h2>
+          <span data-lang="fr">Plusieurs passes</span>
+          <span data-lang="en">Several passes</span>
+        </h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">L’ordre compte, et on relit</span>
+            <span data-lang="en">Order matters, and we reread</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>On ne peut pas charger HIMEM après s’être déjà installé en bas. SYSINIT parcourt CONFIG plusieurs fois : d’abord les directives qui décident <em>où</em> vit DOS, ensuite les <code>DEVICE=</code>, puis le reste. D’où les menus multi-config de DOS 6 (<code>MULTI_CONFIG</code>).</p></div>
+            <div data-lang="en"><p>You cannot load HIMEM after already installing low. SYSINIT walks CONFIG several times: first the lines that decide <em>where</em> DOS lives, then <code>DEVICE=</code>, then the rest. Hence DOS 6’s multi-config menus (<code>MULTI_CONFIG</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>FILES · BUFFERS · LASTDRIVE · INSTALL</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>FILES=</code> agrandit la SFT (page <a href="fichiers.html#dup">Fichiers</a>). <code>BUFFERS=</code> le cache de <code>buf.asm</code>. <code>LASTDRIVE=</code> les CDS. <code>INSTALL=</code> lance un programme via EXEC <em>pendant</em> SYSINIT, avec un environnement volontairement NULL (M067) — pas encore de COMSPEC fiable.</p></div>
+            <div data-lang="en"><p><code>FILES=</code> grows the SFT (<a href="fichiers.html#dup">Files</a> page). <code>BUFFERS=</code> is the <code>buf.asm</code> cache. <code>LASTDRIVE=</code> the CDS. <code>INSTALL=</code> runs a program via EXEC <em>during</em> SYSINIT, with a deliberately NULL environment (M067) — no reliable COMSPEC yet.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>multi_pass_id</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr"><code>doconf</code> : si <code>multi_pass_id = 0</code>, passe initiale pour <code>DOS=HI</code> seulement. M003 a corrigé le parse de <code>DOS=</code>. Une ligne inconnue : <code>badop_p</code> / <code>showlinenum</code>.</p>
+            <p class="note" data-lang="en"><code>doconf</code>: if <code>multi_pass_id = 0</code>, initial pass for <code>DOS=HI</code> only. M003 fixed <code>DOS=</code> parsing. Unknown line: <code>badop_p</code> / <code>showlinenum</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="device">
+        <h2>DEVICE= · overlay</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un programme sans PSP</span>
+            <span data-lang="en">A program with no PSP</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un pilote n’est pas FOO.COM. SYSINIT le charge comme <strong>overlay</strong> (<a href="exec.html#exec-fn">$EXEC AL=3</a>) : pas de PSP, pas d’environnement, une adresse et un facteur de reloc. Puis il appelle la stratégie d’init du driver.</p></div>
+            <div data-lang="en"><p>A driver is not FOO.COM. SYSINIT loads it as an <strong>overlay</strong> (<a href="exec.html#exec-fn">$EXEC AL=3</a>): no PSP, no environment, an address and a reloc factor. Then it calls the driver’s init strategy.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>DEVICEHIGH · UMB</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code> : si les UMB sont liées, on essaie de loger le pilote en haut. <code>LieInt12Mem</code> ment à INT 12h pour que le driver croie qu’il n’y a que 640 Ko — sinon certains s’installent trop bas tous seuls.</p></div>
+            <div data-lang="en"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code>: if UMBs are linked, we try to house the driver high. <code>LieInt12Mem</code> lies to INT 12h so the driver thinks there are only 640 KB — otherwise some install themselves too low.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>ExecDev</span></summary>
+          <div class="level-body">
+            <p class="illust__cap">bios/sysconf.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>InitDevLoad / SizeDevice
+ExecDev                 ; $EXEC overlay
+DevSetBreak             ; taille résidente</pre>
+                <p data-lang="fr">Après init, on « casse » l’arène à la taille que le driver a rendue — le reste redevient libre. Même idée que le TSR, sans PSP.</p>
+                <p data-lang="en">After init we “break” the arena at the size the driver returned — the rest is free again. Same idea as a TSR, no PSP.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="doshi">
+        <h2>DOS=HIGH,UMB</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Mettre le noyau au-dessus de 1 Mo</span>
+            <span data-lang="en">Put the kernel above 1 MB</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La HMA est le premier segment de 64 Ko au-delà de 1 Mo, visible seulement si la ligne A20 est allumée. HIMEM la donne à DOS ; <code>DOS=HIGH</code> y loge le noyau. <code>UMB</code> enchaîne les trous 640K–1M à l’arène (page <a href="memoire.html#umb">Mémoire</a>).</p></div>
+            <div data-lang="en"><p>The HMA is the first 64 KB segment past 1 MB, visible only if the A20 line is on. HIMEM gives it to DOS; <code>DOS=HIGH</code> parks the kernel there. <code>UMB</code> links the 640K–1M holes into the arena (<a href="memoire.html#umb">Memory</a> page).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>ProcDOS tags 1–4</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le parseur rend un tag : 1 HIGH, 2 LOW, 3 UMB, 4 NOUMB. On peut combiner <code>DOS=HIGH,UMB</code>. Sans HIMEM chargé d’abord, HIGH échoue silencieusement et DOS reste bas.</p></div>
+            <div data-lang="en"><p>The parser yields a tag: 1 HIGH, 2 LOW, 3 UMB, 4 NOUMB. You can combine <code>DOS=HIGH,UMB</code>. Without HIMEM loaded first, HIGH fails quietly and DOS stays low.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>TryToMovDOSHi</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">M024 : <code>LoadDOSHiOrLow</code> appelle <code>TryToMovDOSHi</code>. M025 : <code>dos_segreinit</code> avant d’allouer le reste. M072 : <code>Power_Init</code> après les stubs HIGH pour qu’il accroche INT 2Fh correctement. Suite : <a href="himem.html">HIMEM</a>.</p>
+            <p class="note" data-lang="en">M024: <code>LoadDOSHiOrLow</code> calls <code>TryToMovDOSHi</code>. M025: <code>dos_segreinit</code> before allocating the rest. M072: <code>Power_Init</code> after the HIGH stubs so it hooks INT 2Fh correctly. Next: <a href="himem.html">HIMEM</a>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>Sources</h2>
+        <div class="file-index">
+          <span>bios/sysconf.asm<small>doconf, DEVICE, ProcDOS, ExecDev</small></span>
+          <span>bios/sysinit1.asm<small>LoadDOSHiOrLow, MULTI_CONFIG</small></span>
+          <span>inc/arena.inc<small>UMB déjà liés ici</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Sans HIMEM, <code>DOS=HIGH</code> n’est qu’un vœu. <a href="himem.html">Page suivante.</a></p>
+    <p data-lang="en">Without HIMEM, <code>DOS=HIGH</code> is only a wish. <a href="himem.html">Next page.</a></p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

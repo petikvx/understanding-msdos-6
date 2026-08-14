@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SUBST JOIN ASSIGN APPEND — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="chemins.html" aria-current="page"><span data-lang="fr">Chemins</span><span data-lang="en">Paths</span></a>
+      <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      <a href="command.html">COMMAND</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#subst">SUBST</a></li><li><a href="#join">JOIN · ASSIGN</a></li><li><a href="#append">APPEND</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/subst · join · assign · append</p>
+        <h1>
+          <span data-lang="fr">Chemins menteurs</span>
+          <span data-lang="en">Lying paths</span>
+        </h1>
+        <p class="lede" data-lang="fr">Quatre utilitaires qui trichent avant <code>TransPath</code> : une lettre qui est un dossier, deux lecteurs fusionnés, A: qui veut dire B:, et un PATH pour les données. Le noyau a des CDS (Current Directory Structure) exprès pour ça.</p>
+        <p class="lede" data-lang="en">Four utilities that cheat before <code>TransPath</code>: a letter that is a folder, two drives fused, A: meaning B:, and a PATH for data. The kernel has CDS (Current Directory Structure) just for this.</p>
+      </header>
+      <section class="topic" id="subst">
+        <h2>SUBST E: C:\PROJETS</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Une lettre pour un dossier trop profond</span>
+            <span data-lang="en">A letter for a folder that is too deep</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les vieux programmes n’aiment pas les chemins longs. SUBST leur donne E: qui est en réalité C:\PROJETS. DIR E: marche. FORMAT E: serait une catastrophe — d’où les interdits.</p></div>
+            <div data-lang="en"><p>Old programs dislike long paths. SUBST gives them E: that is really C:\PROJETS. DIR E: works. FORMAT E: would be a disaster — hence the bans.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>CDS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>inc/curdir.inc</code> : une entrée par lettre jusqu’à LASTDRIVE. SUBST écrit le chemin réel et pose un flag « join/subst ». TransPath développe avant d’ouvrir.</p></div>
+            <div data-lang="en"><p><code>inc/curdir.inc</code>: one entry per letter up to LASTDRIVE. SUBST writes the real path and sets a “join/subst” flag. TransPath expands it before opening.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>cmd/subst</span></summary>
+          <div class="level-body">
+            <p class="note">Petit utilitaire C/ASM qui appelle INT 21h AH=60h (<code>$NameTrans</code>) et les fonctions CDS. LASTDRIVE= doit être assez grand pour qu’il reste une lettre libre.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="join">
+        <h2>JOIN et ASSIGN</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>JOIN D: C:\D</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>JOIN inverse SUBST : un lecteur physique apparaît comme un sous-dossier. ASSIGN A=B : les appels à A: vont sur B: — rustine pour les programmes qui n’ont que A: en tête.</p></div>
+            <div data-lang="en"><p>JOIN inverts SUBST: a physical drive appears as a subfolder. ASSIGN A=B: calls to A: go to B: — a patch for programs that only know A:.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>incompatibles</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>BACKUP, FORMAT, DISKCOPY, JOIN, SUBST se refusent mutuellement. Le manuel et le code testent les flags CDS avant d’accepter.</p></div>
+            <div data-lang="en"><p>BACKUP, FORMAT, DISKCOPY, JOIN, SUBST refuse one another. The manual and the code test CDS flags before accepting.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>assign.asm</span></summary>
+          <div class="level-body">
+            <p class="note">ASSIGN est un TSR qui patch la table de traduction des lecteurs très tôt (avant même le CDS parfois). Plus brutal que SUBST. Microsoft a fini par le déconseiller.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="append">
+        <h2>APPEND</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>APPEND C:\DATA</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>PATH trouve les .COM. APPEND fait la même chose pour les données : OPEN de FOO.DAT cherche dans C:\DATA si le fichier n’est pas ici. Les bases DOS 2.x en avaient besoin.</p></div>
+            <div data-lang="en"><p>PATH finds .COM files. APPEND does the same for data: opening FOO.DAT searches C:\DATA if the file is not here. DOS 2.x databases needed it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>/X /E</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>/X : APPEND agit aussi sur les recherches (FindFirst). /E : la liste vit dans l’environnement. COMMAND a un <code>APPEND_EXEC</code> et un <code>PDB_Append</code> « not sure if still used ».</p></div>
+            <div data-lang="en"><p>/X: APPEND also acts on searches (FindFirst). /E: the list lives in the environment. COMMAND has <code>APPEND_EXEC</code> and a <code>PDB_Append</code> “not sure if still used”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>INT 2Fh APPEND</span></summary>
+          <div class="level-body">
+            <p class="note">TSR multiplex. TransPath / DOS_Open demandent à APPEND un chemin étendu. Risque : on ouvre le mauvais FOO.DAT. Les manuels crient « ne pas mélanger avec SUBST ».</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/subst · join · assign · append<small>les quatre menteurs</small></span>
+          <span>inc/curdir.inc<small>CDS</small></span>
+          <span>dos/macro.asm<small>TransPath</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">L’interface graphique qui s’en sert : <a href="dosshell.html">DOSSHELL</a>.</p>
+    <p data-lang="en">The GUI that uses all this: <a href="dosshell.html">DOSSHELL</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

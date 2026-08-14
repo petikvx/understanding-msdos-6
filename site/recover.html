@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RECOVER — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="chkdsk.html">CHKDSK</a>
+      <a href="recover.html" aria-current="page">RECOVER</a>
+      <a href="fat.html">FAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#dir">Reconstruire un répertoire</a></li><li><a href="#file">Un fichier abîmé</a></li><li><a href="#bugs">M001–M003</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/recover/recover.asm — « rebuild an ms.dos directory »</p>
+        <h1>RECOVER</h1>
+        <p class="lede" data-lang="fr">Le dernier recours de la page FAT : si la racine est détruite, on invente un fichier par chaîne encore lisible. Ce n’est pas élégant. Ça sauve parfois des octets.</p>
+        <p class="lede" data-lang="en">The FAT page’s last resort: if the root is destroyed, invent one file per chain still readable. It is not elegant. It sometimes saves bytes.</p>
+      </header>
+      <section class="topic" id="dir">
+        <h2>RECOVER A:</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>FILE0001.REC</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sans noms, il reste les chaînes FAT. RECOVER parcourt les clusters occupés, coupe aux mauvais, et crée des fichiers numérotés dans une racine neuve. Les sous-répertoires deviennent de la bouillie.</p></div>
+            <div data-lang="en"><p>Without names, FAT chains remain. RECOVER walks busy clusters, cuts at bad ones, and creates numbered files in a fresh root. Subdirectories become mush.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>vs CHKDSK /F</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>CHKDSK répare à partir des répertoires encore valides. RECOVER <em>jette</em> l’annuaire et repart de la table. À n’utiliser que si CHKDSK ne peut plus rien lire.</p></div>
+            <div data-lang="en"><p>CHKDSK repairs from directories that are still valid. RECOVER <em>throws away</em> the directory and starts from the table. Use only if CHKDSK can no longer read anything.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>recproc.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Même vocabulaire que CHKDSK (EOFVAL, BADVAL, FCB interne). Les deux outils sont cousins ; RECOVER est le plus destructeur.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="file">
+        <h2>RECOVER FICHIER.TXT</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Couper la chaîne au cluster mort</span>
+            <span data-lang="en">Cut the chain at the dead cluster</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un seul fichier : on suit <code>DIR_FIRST</code>, on marque mauvais le cluster illisible, on tronque la taille. Le reste du fichier est perdu.</p></div>
+            <div data-lang="en"><p>A single file: follow <code>DIR_FIRST</code>, mark the unreadable cluster bad, truncate the size. The rest of the file is gone.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>M002 taille</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>20-Aug-91 : bug en ajustant la taille des fichiers récupérés. La taille dans le répertoire et la chaîne FAT devaient encore coincider après la coupe.</p></div>
+            <div data-lang="en"><p>20-Aug-91: bug adjusting recovered file sizes. Directory size and FAT chain still had to match after the cut.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>M003 nibble FAT12</span></summary>
+          <div class="level-body">
+            <p class="note">En marquant un cluster pair comme mauvais, RECOVER écrasait le nibble bas du suivant — exactement le piège de <code>PACK</code> (AND <code>0F000h</code>). Le correctif est le même que dans le noyau.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="bugs">
+        <h2>FCB et SHARE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>M001</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>RECOVER piochait un pointeur SFT dans un champ réservé du FCB. Sous DOS 5 sans SHARE, ce champ a changé de sens. Plus besoin de mettre à jour la SFT : elle est régénérée depuis le FCB.</p></div>
+            <div data-lang="en"><p>RECOVER pulled an SFT pointer from a reserved FCB field. Under DOS 5 without SHARE, that field changed meaning. No need to update the SFT: it is rebuilt from the FCB.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>FCBRegen</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même histoire que <a href="fichiers.html#fcb">fcbio.asm</a> : les 8 octets « CAVEAT PROGRAMMER » ne sont plus stables. Les vieux outils se brûlent.</p></div>
+            <div data-lang="en"><p>Same story as <a href="fichiers.html#fcb">fcbio.asm</a>: the 8 “CAVEAT PROGRAMMER” bytes are no longer stable. Old tools get burned.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>20-Aug-91</span></summary>
+          <div class="level-body">
+            <p class="note">Trois correctifs le même jour (M001 SFT, M002 taille, M003 FAT12). RECOVER n’était plus aligné sur le noyau 5/6.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/recover/recover.asm<small>en-tête, M001–M003</small></span>
+          <span>cmd/recover/recproc.asm<small>parcours FAT</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Pour regarder les octets avant qu’ils meurent : <a href="debug.html">DEBUG</a>.</p>
+    <p data-lang="en">To look at the bytes before they die: <a href="debug.html">DEBUG</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

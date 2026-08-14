@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DOSKEY — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="command.html">COMMAND</a>
+      <a href="doskey.html" aria-current="page">DOSKEY</a>
+      <a href="edlin.html">EDLIN</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#hist">Historique</a></li><li><a href="#mac">Macros</a></li><li><a href="#buf">Buffer circulaire</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/doskey — 1989, multiplex 4800h</p>
+        <h1>DOSKEY</h1>
+        <p class="lede" data-lang="fr">TSR qui vole la lecture de ligne à COMMAND. Flèches, F7, macros <code>ls=dir /w</code>. L’historique est un anneau d’ASCIIZ avec un octet volontairement inutilisable pour distinguer vide et plein.</p>
+        <p class="lede" data-lang="en">A TSR that steals line input from COMMAND. Arrows, F7, macros <code>ls=dir /w</code>. History is a ring of ASCIIZ strings with one deliberately unusable byte so empty and full can be told apart.</p>
+      </header>
+
+      <section class="topic" id="hist">
+        <h2>À la place de AH=0Ah</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>↑ ↓ F7 F8 F9</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>COMMAND lit encore via INT 21h AH=0Ah (buffered input). DOSKEY s’installe dessus (et sur INT 2Fh). Les flèches déplacent <code>buf_current</code> dans l’anneau. F7 dump l’historique, F8 cherche un préfixe, F9 rappelle par numéro.</p></div>
+            <div data-lang="en"><p>COMMAND still reads via INT 21h AH=0Ah (buffered input). DOSKEY hooks that (and INT 2Fh). Arrows move <code>buf_current</code> around the ring. F7 dumps history, F8 searches a prefix, F9 recalls by number.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>/REINSTALL /BUFSIZE</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le transient (<code>trans.asm</code>) parse <code>/REINSTALL</code>, <code>/BUFSIZE</code>, <code>/HISTORY</code> (<code>/H</code>), <code>/MACROS</code> (<code>/M</code>), <code>/INSERT</code>, <code>/OVERSTRIKE</code>. Relancer DOSKEY sans <code>/REINSTALL</code> parle au résident déjà là via INT 2Fh AX=4800h.</p></div>
+            <div data-lang="en"><p>The transient (<code>trans.asm</code>) parses <code>/REINSTALL</code>, <code>/BUFSIZE</code>, <code>/HISTORY</code> (<code>/H</code>), <code>/MACROS</code> (<code>/M</code>), <code>/INSERT</code>, <code>/OVERSTRIKE</code>. Relaunching DOSKEY without <code>/REINSTALL</code> talks to the existing resident via INT 2Fh AX=4800h.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>our_version = 0AA02h</span></summary>
+          <div class="level-body">
+            <pre><code>; gendef.inc
+our_version  =  0aa02h
+; "a return code of 4800h is the indication that nobody
+;  hooked that interrupt" — donc le stamp ne doit PAS être 4800h.
+
+; doskey.asm — install
+hipper_install = 0
+; si 1 : init_main puis rep movsb (buffers sur le code d'init) puis INT 27h</code></pre>
+            <p class="note" data-lang="fr">Le flag <code>hipper_install</code> est à 0 dans cette source : on saute à <code>init_main</code> sans recouvrir le transient. INT 27h (pas 21h/31h) pour rester TSR « à l’ancienne ». Données d’instance au-dessus de <code>ORG 100h</code> : template COMMAND, pointeurs de buffer, insert par défaut.</p>
+            <p class="note" data-lang="en">The <code>hipper_install</code> flag is 0 in this source: jump to <code>init_main</code> without overlaying the transient. INT 27h (not 21h/31h) to stay old-school TSR. Instance data above <code>ORG 100h</code>: COMMAND template, buffer pointers, default insert.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="mac">
+        <h2>Macros</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>DOSKEY d=dir $*</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>macro_base</code> / <code>macro_last</code> / <code>macro_end</code> : un second espace dans le même segment. <code>$*</code>, <code>$1</code>…<code>$9</code>, <code>$T</code> (enchaîner). Flag <code>MAC_EXPAND</code> dans le mot d’état de ligne : on réinjecte le texte expansé comme s’il avait été tapé.</p></div>
+            <div data-lang="en"><p><code>macro_base</code> / <code>macro_last</code> / <code>macro_end</code>: a second workspace in the same segment. <code>$*</code>, <code>$1</code>…<code>$9</code>, <code>$T</code> (chain). <code>MAC_EXPAND</code> flag in the line-state word: expanded text is reinjected as if typed.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>template.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les touches étendues (scan + 0) contre les ASCII. Espace à 7Fh : imprimables, sauf Ctrl-Backspace. DBCS / Corée : INT 16h et fonctions interim <code>F0h/F1h</code> — le même dossier a des <code>ifdef KOREA</code>.</p></div>
+            <div data-lang="en"><p>Extended keys (scan + 0) versus ASCII. Space through 7Fh: printable, except Ctrl-Backspace. DBCS / Korea: INT 16h and interim <code>F0h/F1h</code> — the same folder has <code>ifdef KOREA</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>Windows 386 instance</span></summary>
+          <div class="level-body">
+            <p class="note"><code>w386_instptr</code>, <code>w386_instseg1/2</code> : DOSKEY s’enregistre auprès du VxD pour que chaque VM Windows ait son propre historique. Sans ça, les flèches d’une fenêtre rejoueraient celles d’une autre.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="buf">
+        <h2>L’octet interdit</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>vide ≠ plein</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un anneau où tête = queue peut vouloir dire vide <em>ou</em> plein. <code>buffer.asm</code> réserve un octet mort : « There will always be one unusable byte in the buffer. »</p></div>
+            <div data-lang="en"><p>A ring where head = tail can mean empty <em>or</em> full. <code>buffer.asm</code> keeps one dead byte: “There will always be one unusable byte in the buffer.”</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>split configuration</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Si <code>buf_back</code> &lt; <code>buf_front</code>, l’historique est coupé en deux bouts physiques. <code>get_buflen</code> / <code>nxtbuf_x</code> / <code>buffer_compare</code> gèrent le wrap. Insertion : bits « était déjà split », « on a wrappé en écrivant ».</p></div>
+            <div data-lang="en"><p>If <code>buf_back</code> &lt; <code>buf_front</code>, history is split across two physical ends. <code>get_buflen</code> / <code>nxtbuf_x</code> / <code>buffer_compare</code> handle the wrap. Insertion tracks “was already split” and “we wrapped while writing”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>buffer.asm</span></summary>
+          <div class="level-body">
+            <pre><code>; lines are zero terminated
+; At all other times, there is data between front and back.
+; the buffer is completely empty  ⇔  front == back
+;   (and the unused byte keeps full from looking the same)</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/doskey/doskey.asm<small>ORG 100h, instance data, hipper_install</small></span>
+          <span>cmd/doskey/gendef.inc<small>INT 2Fh 4800h, our_version AA02h</small></span>
+          <span>cmd/doskey/buffer.asm<small>anneau, octet mort</small></span>
+          <span>cmd/doskey/trans.asm<small>/REINSTALL /BUFSIZE /H /M</small></span>
+          <span>cmd/doskey/template.asm<small>touches, DBCS</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">L’éditeur qui était là avant EDIT : <a href="edlin.html">EDLIN</a>.</p>
+    <p data-lang="en">The editor that was there before EDIT: <a href="edlin.html">EDLIN</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

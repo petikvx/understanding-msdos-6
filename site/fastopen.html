@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FASTOPEN — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      <a href="fastopen.html" aria-current="page">FASTOPEN</a>
+      <a href="fat.html">FAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#db">Base en RAM</a></li><li><a href="#open">Au moment de l’OPEN</a></li><li><a href="#limit">Limites</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/fastopen/ · fastopen.txt (J.K.)</p>
+        <h1>FASTOPEN</h1>
+        <p class="lede" data-lang="fr">Un cache de <em>chemins</em>, pas de secteurs. Les bases DOS rouvrent le même fichier cent fois ; chaque OPEN redescend la FAT et le répertoire. FASTOPEN retient « ce nom = ce premier cluster / cette entrée » en RAM.</p>
+        <p class="lede" data-lang="en">A cache of <em>paths</em>, not sectors. DOS databases reopen the same file a hundred times; each OPEN walks FAT and directory again. FASTOPEN remembers “this name = this first cluster / this entry” in RAM.</p>
+      </header>
+      <section class="topic" id="db">
+        <h2>FASTOPEN C:=50</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Une petite base par lecteur</span>
+            <span data-lang="en">A small database per drive</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le doc de conception : « conceptually FASTOPEN itself is a database maintained by DOS ». On indique le lecteur et combien d’entrées. TSR installable par l’utilisateur.</p></div>
+            <div data-lang="en"><p>The design doc: “conceptually FASTOPEN itself is a database maintained by DOS”. You name the drive and how many entries. User-installable TSR.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>fastopen.inc</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le noyau a des crochets <code>fastopen.inc</code> / <code>fastxxxx.inc</code> (déjà inclus dans <code>open.asm</code>). Sans le TSR, les hooks sont no-op.</p></div>
+            <div data-lang="en"><p>The kernel has hooks in <code>fastopen.inc</code> / <code>fastxxxx.inc</code> (already included from <code>open.asm</code>). Without the TSR, the hooks are no-ops.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>fastp.asm · fastsm.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Lookup / store / invalidate. Un RENAME ou DELETE doit casser l’entrée — sinon on ouvre un fantôme. Même problème que le cache de <code>dpb_free_cnt</code>.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="open">
+        <h2>Où ça se branche</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>GETPATH</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Avant de relire tout le répertoire, DOS demande à FASTOPEN : « tu as déjà <code>C:\DB\CLIENT.DAT</code> ? » Oui → <code>DIR_FIRST</code> et secteur d’entrée tout de suite, puis la SFT se remplit comme d’habitude.</p></div>
+            <div data-lang="en"><p>Before rereading the whole directory, DOS asks FASTOPEN: “do you already have <code>C:\DB\CLIENT.DAT</code>?” Yes → <code>DIR_FIRST</code> and entry sector at once, then the SFT fills as usual.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>pas un cache de données</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les octets du fichier passent encore par SMARTDRV / BUFFERS. FASTOPEN n’évite que la <em>recherche du nom</em>. Complémentaire, pas concurrent.</p></div>
+            <div data-lang="en"><p>The file’s bytes still go through SMARTDRV / BUFFERS. FASTOPEN only skips <em>looking up the name</em>. Complementary, not competing.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>A005 lost clusters</span></summary>
+          <div class="level-body">
+            <p class="note"><code>close.asm</code> mentionne PTM 3718 : clusters perdus avec FASTOPEN installé. Invalider trop tard / trop tôt casse ALLOCATE. Les caches s’empilent, les bugs aussi.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="limit">
+        <h2>Ce qu’il ne faut pas en attendre</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Inutile sur un fichier ouvert une fois</span>
+            <span data-lang="en">Useless for a file opened once</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>COMPILE.EXE lu une fois : zéro gain. Un .DBF rouvert à chaque requête : visible. Occupé de la RAM conventionnelle ou UMB.</p></div>
+            <div data-lang="en"><p>COMPILE.EXE read once: zero gain. A .DBF reopened on every query: visible. It occupies conventional RAM or a UMB.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>réseau</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sur un lecteur redir, le serveur est la source de vérité. FASTOPEN est local. D’où les mises en garde des manuels sur les lecteurs réseau.</p></div>
+            <div data-lang="en"><p>On a redirected drive the server is the source of truth. FASTOPEN is local. Hence the manuals’ warnings about network drives.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>fastinit.asm</span></summary>
+          <div class="level-body">
+            <p class="note">L’init réserve le tableau et accroche le multiplex. Même patron que SHARE : le noyau appelle, le TSR répond, sinon no-op.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/fastopen/fastopen.txt<small>spec J.K.</small></span>
+          <span>cmd/fastopen/fastopen.asm<small>TSR</small></span>
+          <span>inc/fastopen.inc<small>hooks noyau</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Quand le répertoire est mort, plus de cache qui tienne : <a href="recover.html">RECOVER</a>.</p>
+    <p data-lang="en">When the directory is dead, no cache will help: <a href="recover.html">RECOVER</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

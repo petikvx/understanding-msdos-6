@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LOADFIX · EXE2BIN · PRINTFIX · WINA20 — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="exec.html">EXEC</a>
+      <a href="loadfix.html" aria-current="page">LOADFIX</a>
+      <a href="himem.html">HIMEM</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#loadfix">LOADFIX</a></li><li><a href="#exe2bin">EXE2BIN</a></li><li><a href="#printfix">PRINTFIX</a></li><li><a href="#wina20">WINA20</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/loadfix · exe2bin · printfix · wina20</p>
+        <h1>LOADFIX · EXE2BIN · PRINTFIX · WINA20</h1>
+        <p class="lede" data-lang="fr">Quatre rustines de bord. Charger au-dessus de 64 Ko, aplatir un MZ en .COM, mentir au BIOS imprimante, et un VxD Windows dont on n’a que le binaire. Le DOS 6 est aussi une collection de pansements.</p>
+        <p class="lede" data-lang="en">Four edge patches. Load above 64 KB, flatten an MZ into a .COM, lie to the printer BIOS, and a Windows VxD of which we only have the binary. DOS 6 is also a collection of bandages.</p>
+      </header>
+
+      <section class="topic" id="loadfix">
+        <h2>Packed file is corrupt</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>LOADFIX FOO.EXE</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Quand DOS=HIGH, COMMAND réside tout en bas et l’appli se charge parfois <em>sous</em> 64 Ko. Les unpackers EXEPACK de l’époque signent leur décompression et crient « Packed file is corrupt ». LOADFIX s’alloue assez de mémoire pour que le prochain EXEC commence au-dessus du premier segment 1000h.</p></div>
+            <div data-lang="en"><p>With DOS=HIGH, COMMAND sits at the bottom and the app sometimes loads <em>under</em> 64 KB. Period EXEPACK unpackers sign their decompression and yell “Packed file is corrupt”. LOADFIX allocates enough memory so the next EXEC starts above the first 1000h paragraph.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>CMDSIZE 94h paras</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le résident de COMMAND est chiffré à <code>94h</code> paragraphes (≈ 2,3 Ko) — la même constante que la page COMMAND. LOADFIX : taille de soi + (1000h − CMDSIZE − soi) si on est encore sous 64 Ko, puis AH=4Ah, puis AH=4Bh du programme demandé, puis AH=4Dh pour renvoyer <em>son</em> errorlevel.</p></div>
+            <div data-lang="en"><p>COMMAND’s resident size is hard-coded as <code>94h</code> paragraphs (≈ 2.3 KB) — the same constant as the COMMAND page. LOADFIX: own size + (1000h − CMDSIZE − self) if still under 64 KB, then AH=4Ah, then AH=4Bh of the requested program, then AH=4Dh to return <em>its</em> errorlevel.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>loadfix.asm</span></summary>
+          <div class="level-body">
+            <pre><code>CMDSIZE  equ  94h          ; current resident size of command.com
+start:
+    mov  ax, offset EndProg
+    add  ax, 15
+    shr  ax, 4             ; our size in paragraphs
+    mov  cx, es
+    add  ax, cx            ; top of this program
+    sub  ax, 1000h - CMDSIZE
+    jae  no_mem            ; already above first 64K
+    neg  ax
+    add  bx, ax            ; grow so EXEC lands higher
+no_mem:
+    mov  ah, 4Ah
+    int  21h</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="exe2bin">
+        <h2>EXE2BIN</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>MZ → image plate</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un .COM n’a pas d’en-tête : CS=DS=SS, IP=100h. GRAPHICS, GRAFTABL, MORE se lient en .EXE puis passent par EXE2BIN. L’outil refuse les relocalisations et les fichiers trop gros pour un segment.</p></div>
+            <div data-lang="en"><p>A .COM has no header: CS=DS=SS, IP=100h. GRAPHICS, GRAFTABL, MORE link as .EXE then go through EXE2BIN. The tool refuses relocations and files too big for one segment.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>OLDLINK</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Équate <code>OLDLINK</code> (off ici) : l’ancien linker mettait son numéro de version là où le nouveau met le nombre d’octets de la dernière page. Si on lit <code>0004</code>, on force <code>200h</code> pour prendre la page entière. M001 (27-Dec-90) : plus de test spécial sur les jokers dans le nom.</p></div>
+            <div data-lang="en"><p><code>OLDLINK</code> equate (off here): the old linker put its version number where the new one puts bytes-used-in-last-page. If you read <code>0004</code>, force <code>200h</code> to take the whole page. M001 (27-Dec-90): no more special check on wildcards in the name.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>e2binit.asm · rev 2.4</span></summary>
+          <div class="level-body">
+            <p class="note">« Loader for EXE files under 86-DOS ». Extensions par défaut <code>.EXE</code> → <code>.BIN</code>. Même parseur / messages que le reste de la génération 4. Segment <code>ZLOAD</code> pour l’image à réécrire.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="printfix">
+        <h2>PRINTFIX — bit 3 menteur</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>write fault sur LPT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Doug Olson, 30-Aug-91. Certains BIOS rendent le bit 3 du statut imprimante (I/O error) levé alors que ça imprime. DOS 5 a commencé à le croire → write fault. PRINTFIX crochète INT 17h et, pour AH=02h (get status), rend <code>90h</code> (selected + not busy) sans même appeler le BIOS.</p></div>
+            <div data-lang="en"><p>Doug Olson, 30-Aug-91. Some BIOSes return printer status bit 3 (I/O error) set even though printing works. DOS 5 started believing it → write fault. PRINTFIX hooks INT 17h and, for AH=02h (get status), returns <code>90h</code> (selected + not busy) without even calling the BIOS.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>uniquement les PC malades</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le commentaire insiste : « should only be installed on systems that exhibit the I/O error problem ». Sur une machine saine, on masque de vraies pannes.</p></div>
+            <div data-lang="en"><p>The comment insists: “should only be installed on systems that exhibit the I/O error problem”. On a healthy machine you hide real faults.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>printfix.asm</span></summary>
+          <div class="level-body">
+            <pre><code>patch proc near
+    pushf
+    cmp  ah, 02h          ; Get Printer Status?
+    jne  call_old
+    mov  ah, 90h          ; bit4 selected, bit7 not busy
+    popf
+    iret
+call_old:
+    popf
+    pushf
+    call [old_int_17_addr]
+    iret</code></pre>
+            <p class="note" data-lang="fr">Pour AH≠02h (init, out char) on appelle l’ancien handler — on ne ment que sur le statut. Le résident tient dans quelques dizaines d’octets.</p>
+            <p class="note" data-lang="en">For AH≠02h (init, out char) the old handler is called — we only lie about status. The resident is a few dozen bytes.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="wina20">
+        <h2>WINA20.386</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>binaire seul</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>cmd/wina20/</code> ne contient que <code>wina20.386</code> et un makefile qui le copie / compresse. C’est le VxD Windows 3.x qui empêche HIMEM d’éteindre A20 pendant que Windows tourne — le pendant noyau de la page HIMEM (« les applis copy-protected veulent A20 éteint »).</p></div>
+            <div data-lang="en"><p><code>cmd/wina20/</code> holds only <code>wina20.386</code> and a makefile that copies / compresses it. It is the Windows 3.x VxD that stops HIMEM turning A20 off while Windows runs — the kernel-side counterpart of the HIMEM page (“copy-protected apps want A20 off”).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>pourquoi dans cmd/ ?</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Livré sur la disquette DOS, pas dans Windows. HIMEM et Windows 3.0 se battaient pour A20 ; le VxD est le cessez-le-feu. Sans source, on le range avec les rustines, pas avec EMM386.</p></div>
+            <div data-lang="en"><p>Shipped on the DOS disk, not inside Windows. HIMEM and Windows 3.0 fought over A20; the VxD is the cease-fire. With no source, it sits with the patches, not with EMM386.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>wina20.38_</span></summary>
+          <div class="level-body">
+            <p class="note">Le makefile produit la forme compressée Setup (<code>wina20.38_</code>) — même pipeline EXPAND que HIMEM.SY_.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/loadfix/loadfix.asm<small>CMDSIZE 94h, AH=4Ah/4Bh/4Dh</small></span>
+          <span>cmd/exe2bin/e2binit.asm<small>OLDLINK, M001, .EXE→.BIN</small></span>
+          <span>cmd/printfix/printfix.asm<small>INT 17h AH=02h → 90h</small></span>
+          <span>cmd/wina20/wina20.386<small>VxD, pas de source</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Ce qui reste dans <code>cmd/</code> sans chapitre : <a href="restes.html">ADDRV · REDIR · MIRROR</a>.</p>
+    <p data-lang="en">What is left in <code>cmd/</code> without a chapter: <a href="restes.html">ADDRV · REDIR · MIRROR</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

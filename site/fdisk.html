@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FDISK — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="format.html">FORMAT</a>
+        <a href="fdisk.html" aria-current="page">FDISK</a>
+        <a href="boot.html">Boot</a>
+        <a href="chkdsk.html">CHKDSK</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#mbr">MBR</a></li>
+        <li><a href="#types">DOS12 · DOS16 · DOSNEW</a></li>
+        <li><a href="#ext"><span data-lang="fr">Étendue</span><span data-lang="en">Extended</span></a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/fdisk/ · partinfo.c · makepart.c</p>
+        <h1>FDISK</h1>
+        <p class="lede" data-lang="fr">Avant FAT, avant FORMAT : quatre cases dans le secteur 0 du disque dur, chacune un type, un début, une taille, un bit « active ». C’est le plan que le BIOS et le boot lisent pour savoir <em>quelle</em> partition amorcer.</p>
+        <p class="lede" data-lang="en">Before FAT, before FORMAT: four slots in hard-disk sector 0, each a type, a start, a size, an “active” bit. That is the map the BIOS and the boot read to know <em>which</em> partition to start.</p>
+      </header>
+
+      <section class="topic" id="mbr">
+        <h2>Quatre entrées</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un disque, plusieurs lettres</span>
+            <span data-lang="en">One disk, several letters</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>C: est souvent la partition <em>primaire</em> active. D: une logique dans une partition étendue. FDISK ne formate pas : il écrit la table, puis il faut FORMAT chaque volume. Une seule entrée active à la fois — c’est elle que le MBR lance.</p></div>
+            <div data-lang="en"><p>C: is often the active <em>primary</em> partition. D: a logical volume inside an extended partition. FDISK does not format: it writes the table, then each volume needs FORMAT. Only one entry is active — that is the one the MBR starts.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>find_free_partition</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>partinfo.c</code> parcourt les 4 slots. Vide = sys_id nul. <code>find_active_partition</code> cherche le bit actif. <code>int13.c</code> parle au BIOS pour lire/écrire le MBR. <code>fdboot.asm</code> / <code>bootrec.asm</code> le code d’amorçage du MBR lui-même.</p></div>
+            <div data-lang="en"><p><code>partinfo.c</code> walks the 4 slots. Empty = null sys_id. <code>find_active_partition</code> looks for the active bit. <code>int13.c</code> talks to the BIOS to read/write the MBR. <code>fdboot.asm</code> / <code>bootrec.asm</code> is the MBR boot code itself.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>C14 non-DOS</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Mars 1990 (EGH C14) : on peut enfin <em>effacer</em> une partition qui n’est pas DOS. <code>find_non_dos_partition</code> = sys_id ni nul, ni DOS12/16/NEW, ni EXTENDED. C15 : reconnaître d’autres types.</p>
+            <p class="note" data-lang="en">March 1990 (EGH C14): we can finally <em>delete</em> a non-DOS partition. <code>find_non_dos_partition</code> = sys_id neither null, nor DOS12/16/NEW, nor EXTENDED. C15: recognise more types.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="types">
+        <h2>1 · 4 · 6</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le type dit comment lire la FAT</span>
+            <span data-lang="en">The type says how to read the FAT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même système de fichiers, trois étiquettes selon la taille — déjà croisées dans le code d’install : FAT12, FAT16 &lt; 32 Mo, FAT16 « huge ».</p></div>
+            <div data-lang="en"><p>The same file system, three labels by size — already seen in the install code: FAT12, FAT16 &lt; 32 MB, FAT16 “huge”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>DOS12 · DOS16 · DOSNEW</span></summary>
+          <div class="level-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Nom</th><th data-lang="fr">Sens</th><th data-lang="en">Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>01</code></td><td>DOS12</td><td>FAT12</td><td>FAT12</td></tr>
+                  <tr><td><code>04</code></td><td>DOS16</td><td>FAT16 ≤ 32 Mo</td><td>FAT16 ≤ 32 MB</td></tr>
+                  <tr><td><code>05</code></td><td>EXTENDED</td><td data-lang="fr">conteneur de logiques</td><td data-lang="en">logical container</td></tr>
+                  <tr><td><code>06</code></td><td>DOSNEW</td><td>FAT16 &gt; 32 Mo</td><td>FAT16 &gt; 32 MB</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>install/catalog.c</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Le programme d’installation commente : <code>DOS12==1</code>, <code>DOS16==4</code>, <code>DOSNEW==6</code> « huge partition &gt; 32 meg ». FORMAT écrit alors <code>BPB_BIGTOTALSECTORS</code>. Pas de type FAT32 : trop tôt.</p>
+            <p class="note" data-lang="en">Setup comments: <code>DOS12==1</code>, <code>DOS16==4</code>, <code>DOSNEW==6</code> “huge partition &gt; 32 meg”. FORMAT then writes <code>BPB_BIGTOTALSECTORS</code>. No FAT32 type: too early.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="ext">
+        <h2>
+          <span data-lang="fr">Partition étendue</span>
+          <span data-lang="en">Extended partition</span>
+        </h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Plus que quatre volumes</span>
+            <span data-lang="en">More than four volumes</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Quatre primaires, c’est peu. Une entrée de type 05 contient une <em>chaîne</em> de volumes logiques, chacun avec un mini-MBR. FDISK affiche D:, E:, …</p></div>
+            <div data-lang="en"><p>Four primaries is few. A type-05 entry holds a <em>chain</em> of logical volumes, each with a mini-MBR. FDISK shows D:, E:, …</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>ext_table[23]</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>find_free_ext</code> / commentaires : jusqu’à 23 entrées étendues. Seules DOS12/16/NEW sont des volumes DOS utilisables dans cette chaîne.</p></div>
+            <div data-lang="en"><p><code>find_free_ext</code> / comments: up to 23 extended entries. Only DOS12/16/NEW are usable DOS volumes in that chain.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>reboot.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Après un changement de table, FDISK propose souvent un reboot : le BIOS et IO.SYS ont déjà lu l’ancien MBR. <code>reboot.asm</code> s’en charge. Les menus sont en C (<code>c_menus.c</code>, <code>mainmenu.c</code>) — rare îlot C dans un océan d’assembleur.</p>
+            <p class="note" data-lang="en">After a table change, FDISK often offers a reboot: the BIOS and IO.SYS already read the old MBR. <code>reboot.asm</code> handles that. Menus are in C (<code>c_menus.c</code>, <code>mainmenu.c</code>) — a rare C island in a sea of assembly.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/fdisk/partinfo.c<small>4 slots, types, actif</small></span>
+          <span>cmd/fdisk/makepart.c<small>création</small></span>
+          <span>cmd/fdisk/int13.c<small>lecture MBR</small></span>
+          <span>cmd/fdisk/fdboot.asm<small>code MBR</small></span>
+          <span>install/catalog.c<small>DOS12/16/NEW = 1/4/6</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">La chaîne complète : <a href="fdisk.html">FDISK</a> → <a href="format.html">FORMAT</a> → <a href="boot.html">boot</a> → <a href="config.html">CONFIG</a> → <a href="command.html">COMMAND</a>.</p>
+    <p data-lang="en">The full chain: <a href="fdisk.html">FDISK</a> → <a href="format.html">FORMAT</a> → <a href="boot.html">boot</a> → <a href="config.html">CONFIG</a> → <a href="command.html">COMMAND</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

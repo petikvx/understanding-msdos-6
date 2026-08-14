@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAMDRIVE — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="ramdrive.html" aria-current="page">RAMDRIVE</a>
+      <a href="himem.html">HIMEM</a>
+      <a href="config.html">CONFIG</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#vol">Un volume en RAM</a></li><li><a href="#e">/E /A</a></li><li><a href="#bpb">BPB maison</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/ramdrive/ramdrive.asm</p>
+        <h1>RAMDRIVE.SYS</h1>
+        <p class="lede" data-lang="fr">Un disque qui n’en est pas un : le driver fabrique un BPB, une FAT, une racine, et sert les secteurs depuis la XMS, l’EMS ou la mémoire conventionnelle. DOS y voit un FAT12/16 normal.</p>
+        <p class="lede" data-lang="en">A disk that is not one: the driver builds a BPB, a FAT, a root, and serves sectors from XMS, EMS or conventional memory. DOS sees a normal FAT12/16.</p>
+      </header>
+      <section class="topic" id="vol">
+        <h2>device = ramdrive.sys</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>[bbbb] [ssss] [dddd]</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Taille en Ko (défaut 64, min 4, max 32767), taille de secteur (128–1024, max 512 sous IBM PC DOS), nombre d’entrées racine (défaut 64). Si la RAM manque, on retombe à 16 entrées racine.</p></div>
+            <div data-lang="en"><p>Size in KB (default 64, min 4, max 32767), sector size (128–1024, max 512 under IBM PC DOS), root entries (default 64). If RAM is short, it falls back to 16 root entries.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>VOLID</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le commentaire exige de changer la date de volume à chaque version du driver. C’est une entrée <code>ATTR_VOLUME_ID</code> dans la racine — page <a href="fat.html#repertoire">DIR_ENTRY</a>.</p></div>
+            <div data-lang="en"><p>The comment insists the volume date change with every driver version. That is an <code>ATTR_VOLUME_ID</code> root entry — <a href="fat.html#repertoire">DIR_ENTRY</a> page.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>dirent.inc local</span></summary>
+          <div class="level-body">
+            <p class="note">Le driver embarque sa copie de <code>dirent.inc</code> et de <code>devsym.inc</code> : il construit le volume tout seul, sans appeler FORMAT. Au reboot, tout disparaît.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="e">
+        <h2>/E · /A · conventionnel</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Trois endroits pour les octets</span>
+            <span data-lang="en">Three places for the bytes</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>/E : XMS (HIMEM). /A : Above Board / EMS. Rien : mémoire basse — on vole de la TPA, mauvais pour FOO.COM.</p></div>
+            <div data-lang="en"><p>/E: XMS (HIMEM). /A: Above Board / EMS. Neither: low memory — it steals TPA, bad for FOO.COM.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>xmm.inc · emm.inc</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même couple XMS/EMS qu’<a href="emm386.html">EMM386</a>. Sans HIMEM, /E échoue et le driver ne s’installe pas. Above Board est l’ancêtre matériel de l’EMS.</p></div>
+            <div data-lang="en"><p>Same XMS/EMS pair as <a href="emm386.html">EMM386</a>. Without HIMEM, /E fails and the driver does not install. Above Board is EMS’s hardware ancestor.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>loadall.inc</span></summary>
+          <div class="level-body">
+            <p class="note">Sur 286, la copie vers l’extended memory passait parfois par l’instruction LOADALL (non documentée). Le fichier est encore là.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="bpb">
+        <h2>Un FAT comme les autres</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>DIR E:</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>CHKDSK, COPY, COMMAND traitent E: comme C:. Seul le driver sait que « secteur 10 » est un offset dans un bloc XMS.</p></div>
+            <div data-lang="en"><p>CHKDSK, COPY, COMMAND treat E: like C:. Only the driver knows “sector 10” is an offset in an XMS block.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>media byte</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le descripteur média est choisi pour ressembler à une disquette (souvent F8/F0). <code>IsEOF</code> et le cas <code>0FF0h</code> (page FAT) existent aussi pour ces volumes.</p></div>
+            <div data-lang="en"><p>The media descriptor is chosen to look like a floppy (often F8/F0). <code>IsEOF</code> and the <code>0FF0h</code> case (FAT page) apply to these volumes too.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>INIT overlay</span></summary>
+          <div class="level-body">
+            <p class="note">Comme tout DEVICE=, l’init calcule la taille résidente (petit stub + BPB) et rend le reste. Les mégaoctets XMS ne sont pas dans l’arène DOS.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/ramdrive/ramdrive.asm<small>syntaxe, /E /A, VOLID</small></span>
+          <span>dev/ramdrive/xmm.inc · emm.inc<small>XMS, EMS</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Économiser le CPU plutôt que le disque : <a href="power.html">POWER.SYS</a>.</p>
+    <p data-lang="en">Save the CPU rather than the disk: <a href="power.html">POWER.SYS</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

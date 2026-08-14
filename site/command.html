@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMMAND.COM — Comprendre MS-DOS 6 / Understanding MS-DOS 6</title>
+  <meta name="description" content="COMMAND.COM : résident et transient, COMTAB, pipes par fichiers temporaires, batch, checksum.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html" aria-current="page">COMMAND</a>
+        <a href="boot.html">Boot</a>
+        <a href="config.html">CONFIG</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title"><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#shell"><span data-lang="fr">La machine</span><span data-lang="en">The machine</span></a></li>
+        <li><a href="#trois"><span data-lang="fr">Trois morceaux</span><span data-lang="en">Three pieces</span></a></li>
+        <li><a href="#boucle"><span data-lang="fr">La boucle</span><span data-lang="en">The loop</span></a></li>
+        <li><a href="#comtab">COMTAB</a></li>
+        <li><a href="#pipe">Pipes</a></li>
+        <li><a href="#batch">BATCH</a></li>
+        <li><a href="#path">PATH · EXEC</a></li>
+        <li><a href="#sources"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · cmd/command/</p>
+        <h1>COMMAND.COM</h1>
+        <p class="lede" data-lang="fr">
+          C’est lui qui tape le nom que <a href="exec.html">$EXEC</a>
+          charge. Deux corps dans un fichier : un <strong>résident</strong>
+          minuscule qui survit à FOO.COM, un <strong>transient</strong>
+          en haut de la RAM qu’on peut écraser — et recharger grâce à
+          un checksum. Les « pipes » ne sont pas des tuyaux : ce sont
+          deux fichiers temporaires.
+        </p>
+        <p class="lede" data-lang="en">
+          This is what types the name <a href="exec.html">$EXEC</a>
+          loads. Two bodies in one file: a tiny <strong>resident</strong>
+          that survives FOO.COM, a <strong>transient</strong> at the top
+          of RAM that may be overwritten — and reloaded via a checksum.
+          “Pipes” are not pipes: they are two temporary files.
+        </p>
+      </header>
+
+      <section class="machine" id="shell" aria-labelledby="shell-title">
+        <div class="machine__bar">
+          <h2 id="shell-title"><code>DIR | SORT</code></h2>
+          <div class="machine__ctrl">
+            <button type="button" data-cmd="prev">←</button>
+            <button type="button" data-cmd="play"><span data-lang="fr">Lecture</span><span data-lang="en">Play</span></button>
+            <button type="button" data-cmd="next">→</button>
+            <button type="button" data-cmd="reset"><span data-lang="fr">Début</span><span data-lang="en">Start</span></button>
+          </div>
+        </div>
+        <ol class="machine__dots" data-dots></ol>
+        <div class="machine__stage">
+          <div class="panel">
+            <h3>RAM</h3>
+            <div class="arena-row" data-arena></div>
+            <p class="illust__cap" style="margin:0.55rem 0 0" data-line></p>
+          </div>
+          <div class="panel">
+            <h3>stdin / stdout</h3>
+            <dl class="sft-card" data-io></dl>
+          </div>
+        </div>
+        <p class="machine__say" data-say></p>
+      </section>
+
+      <section class="topic" id="trois">
+        <h2>
+          <span data-lang="fr">Trois morceaux dans un .COM</span>
+          <span data-lang="en">Three pieces in one .COM</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Ce qui reste, ce qu’on jette, ce qu’on relit</span>
+            <span data-lang="en">What stays, what is thrown, what is reread</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                L’en-tête de <code>command1.asm</code> le dit : trois
+                parts. Le <strong>résident</strong> gère Ctrl-C, l’erreur
+                disque, et INT 2Eh (« exécute cette ligne »).
+                L’<strong>init</strong> s’efface après le premier
+                démarrage. Le <strong>transient</strong> contient DIR,
+                COPY, le prompt — tout ce qui est gros. Un programme
+                gourmand l’écrase ; au retour, un checksum décide s’il
+                faut le relire depuis le disque (<code>COMSPEC</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The header of <code>command1.asm</code> says it: three
+                parts. The <strong>resident</strong> handles Ctrl-C, disk
+                errors, and INT 2Eh (“run this line”).
+                <strong>Init</strong> is discarded after first boot. The
+                <strong>transient</strong> holds DIR, COPY, the prompt —
+                everything large. A hungry program overwrites it; on
+                return a checksum decides whether to reread it from disk
+                (<code>COMSPEC</code>).
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>RESGROUP · TRANGROUP · TPA</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>comseg.asm</code> : DATARES + CODERES (+ INIT, TAIL)
+                forment le résident. TRANCODE + TRANDATA + TRANSPACE +
+                TRANTAIL forment le transient, chargé en haut de la
+                mémoire. Entre les deux : la <strong>TPA</strong>
+                (Transient Program Area) — c’est là que
+                <a href="exec.html">$EXEC</a> pose FOO.COM.
+              </p>
+              <p>
+                <code>readme.txt</code> : TRANDATA a des valeurs initiales
+                et entre dans le checksum. TRANSPACE est modifié à chaque
+                cycle et <em>exclu</em> — on le traite comme non
+                initialisé à chaque commande.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>comseg.asm</code>: DATARES + CODERES (+ INIT, TAIL)
+                are the resident. TRANCODE + TRANDATA + TRANSPACE +
+                TRANTAIL are the transient, loaded at the top of memory.
+                Between them: the <strong>TPA</strong> (Transient Program
+                Area) — that is where <a href="exec.html">$EXEC</a>
+                plants FOO.COM.
+              </p>
+              <p>
+                <code>readme.txt</code>: TRANDATA has initial values and
+                is in the checksum. TRANSPACE is changed every cycle and
+                is <em>excluded</em> — treat it as uninitialized for
+                every command.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>ChkSum · LoadCom</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">cmd/command/command2.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>mov  ds, TrnSeg
+mov  si, 100h
+mov  cx, TranDataEnd - 100h
+shr  cx, 1
+lodsw / add dx, ax / adc dx, 0</pre>
+                <p data-lang="fr">Somme 16 bits avec retenue, depuis l’équivalent du PSP:100h jusqu’à la fin de TRANDATA. TRANSPACE n’y est pas.</p>
+                <p data-lang="en">16-bit sum with carry, from the PSP:100h equivalent to the end of TRANDATA. TRANSPACE is not included.</p>
+              </div>
+              <div class="anno__row">
+                <pre>call ChkSum
+; si DX ≠ Sum sauvé → LoadCom
+; rouvre COMSPEC, relit le transient</pre>
+                <p data-lang="fr">Un programme qui n’a pas tout pris évite le reload — le commentaire d’en-tête le revendique. Novell RPL (M038) casse ce schéma en rendant de la RAM trop tôt.</p>
+                <p data-lang="en">A program that did not take everything skips the reload — the header comment boasts about that. Novell RPL (M038) breaks the scheme by giving RAM back too early.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="boucle">
+        <h2>
+          <span data-lang="fr">La boucle de commande</span>
+          <span data-lang="en">The command loop</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Pas toujours un prompt</span>
+            <span data-lang="en">Not always a prompt</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                On croit que COMMAND attend une ligne. En réalité il
+                interroge d’abord : est-on au milieu d’un pipe ? d’un
+                <code>FOR</code> ? d’un <code>.BAT</code> ? Seulement
+                sinon, et si ECHO est allumé, il affiche le prompt.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                You think COMMAND waits for a line. In fact it first
+                asks: are we in the middle of a pipe? a <code>FOR</code>?
+                a <code>.BAT</code>? Only otherwise, and if ECHO is on,
+                does it print the prompt.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>PIPE &gt; FOR &gt; BATCH &gt; clavier</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Ordre explicite dans <code>tcode.asm</code> :
+                <code>PIPEFLAG</code> « has highest presedence » (faute
+                d’orthographe d’origine), puis <code>FORFLAG</code>,
+                puis <code>BATCH</code>. Redirection
+                (<code>RE_INSTR</code> / <code>RE_OUTSTR</code> /
+                <code>RE_OUT_APP</code> pour <code>&gt;&gt;</code>)
+                est remise à zéro avant chaque nouvelle ligne batch.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Explicit order in <code>tcode.asm</code>:
+                <code>PIPEFLAG</code> “has highest presedence”
+                (original misspelling), then <code>FORFLAG</code>, then
+                <code>BATCH</code>. Redirection
+                (<code>RE_INSTR</code> / <code>RE_OUTSTR</code> /
+                <code>RE_OUT_APP</code> for <code>&gt;&gt;</code>)
+                is cleared before each new batch line.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>GETCOM</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>cmd/command/tcode.asm</figcaption>
+              <pre><code>        TEST    [PIPEFLAG], -1
+        JNZ     PIPEPROC
+        TEST    [FORFLAG], -1
+        JNZ     FORPROC
+        TEST    [BATCH], -1
+        JZ      ISNOBAT
+        INVOKE  READBAT</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="comtab">
+        <h2>COMTAB</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">DIR n’est pas un fichier</span>
+            <span data-lang="en">DIR is not a file</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Les commandes « internes » vivent dans le transient.
+                Une table, <code>COMTAB</code>, associe un nom à une
+                routine : DIR, COPY, TYPE, SET, mais aussi CALL, GOTO,
+                IF, FOR, et sous DOS&nbsp;6 <code>LOADHIGH</code> /
+                <code>LH</code>. Si le nom n’y est pas, on cherche un
+                .COM / .EXE / .BAT sur le disque.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                “Internal” commands live in the transient. A table,
+                <code>COMTAB</code>, maps a name to a routine: DIR, COPY,
+                TYPE, SET, but also CALL, GOTO, IF, FOR, and under
+                DOS&nbsp;6 <code>LOADHIGH</code> / <code>LH</code>. If
+                the name is not there, we look for a .COM / .EXE / .BAT
+                on disk.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>fCheckDrive · fSwitchAllowed</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Chaque entrée : longueur, nom, drapeaux (le lecteur
+                existe-t-il ? des switches sont-ils permis ?), adresse,
+                messages d’aide. <code>REM</code> pointe sur
+                <code>TCOMMAND</code> — la boucle elle-même : ne rien
+                faire, recommencer. <code>REN</code> et
+                <code>RENAME</code> partagent <code>CRENAME</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Each entry: length, name, flags (does the drive exist?
+                are switches allowed?), address, help messages.
+                <code>REM</code> points at <code>TCOMMAND</code> — the
+                loop itself: do nothing, start over. <code>REN</code>
+                and <code>RENAME</code> share <code>CRENAME</code>.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>tdata.asm</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>cmd/command/tdata.asm — COMTAB (extrait)</figcaption>
+              <pre><code>COMTAB  DB  3,"DIR",fSwitchAllowed+fCheckDrive
+        DW  OFFSET TRANGROUP:CATALOG
+        …
+        DB  3,"REM",fSwitchAllowed+fLimitHelp
+        DW  OFFSET TRANGROUP:TCOMMAND
+        …
+        DB  8,"LOADHIGH",fSwitchAllowed    ; M003
+        DW  OFFSET TRANGROUP:LoadHigh
+        DB  2,"LH",fSwitchAllowed
+        DB  0                              ; fin</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="pipe">
+        <h2>
+          <span data-lang="fr">Des pipes qui n’en sont pas</span>
+          <span data-lang="en">Pipes that are not pipes</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un fichier au milieu</span>
+            <span data-lang="en">A file in the middle</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Unix lance les deux programmes à la fois. COMMAND.COM
+                n’a pas de vrais pipes : il crée un fichier temporaire,
+                y écrit la sortie du premier programme, puis le donne
+                en entrée au second. D’où la lenteur, et d’où deux noms
+                <code>PIPE1</code> / <code>PIPE2</code> qu’on échange.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Unix runs both programs at once. COMMAND.COM has no
+                real pipes: it creates a temporary file, writes the
+                first program’s output there, then feeds it to the
+                second. Hence the slowness, and two names
+                <code>PIPE1</code> / <code>PIPE2</code> that get swapped.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>TEMP= · CreateTempFile</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                On cherche <code>TEMP=</code> dans l’environnement. S’il
+                désigne un répertoire (CHMOD, bit 10h), les temporaires
+                y vont. Sinon : répertoire <em>courant</em>, plus la
+                racine — commentaire SR : le nombre d’entrées à la
+                racine est fixe (page <a href="fat.html#repertoire">FAT</a>).
+                Appel <code>AH=5Ah</code> (déjà vu dans
+                <a href="int21.html">INT 21h</a>), puis CLOSE immédiat
+                pour ne pas « proliferate handles ».
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>TEMP=</code> is looked up in the environment. If it
+                names a directory (CHMOD, bit 10h), the temps go there.
+                Otherwise: the <em>current</em> directory, no longer the
+                root — SR comment: the root has a fixed entry count
+                (<a href="fat.html#repertoire">FAT</a> page).
+                Call <code>AH=5Ah</code> (already on
+                <a href="int21.html">INT 21h</a>), then CLOSE at once so
+                as not to “proliferate handles”.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>PIPEPROCSTRT</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">cmd/command/tpipe.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>INC  [PIPEFILES]
+call Find_Name_In_Environment  ; "TEMP="
+int  21h  AH=5Ah               ; CreateTempFile × 2
+int  21h  AH=3Eh               ; CLOSE</pre>
+                <p data-lang="fr">Deux fichiers, zéro handle laissé ouvert. La redirection de stdout se fait ensuite comme un <code>&gt;</code>.</p>
+                <p data-lang="en">Two files, zero handles left open. stdout redirection is then done like a <code>&gt;</code>.</p>
+              </div>
+              <div class="anno__row">
+                <pre>AND  [ECHOFLAG], 0FEh
+XCHG DX, [INPIPEPTR]</pre>
+                <p data-lang="fr">Pas de prompt au milieu du tuyau. On inverse entrée et sortie pour l’élément suivant.</p>
+                <p data-lang="en">No prompt in the middle of the pipe. Input and output are swapped for the next element.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="batch">
+        <h2>.BAT</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un fichier lu à la place du clavier</span>
+            <span data-lang="en">A file read instead of the keyboard</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un batch n’est pas un programme : COMMAND ouvre le
+                fichier, lit une ligne, la traite comme si vous l’aviez
+                tapée, recommence. <code>CALL</code> empile un autre
+                batch (<code>Nest</code>, <code>next_batch</code>).
+                <code>GOTO</code>, <code>IF</code>, <code>FOR</code>,
+                <code>SHIFT</code> vivent dans <code>tbatch*.asm</code>
+                et <code>tfor.asm</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A batch file is not a program: COMMAND opens the file,
+                reads a line, treats it as if you had typed it, repeats.
+                <code>CALL</code> stacks another batch
+                (<code>Nest</code>, <code>next_batch</code>).
+                <code>GOTO</code>, <code>IF</code>, <code>FOR</code>,
+                <code>SHIFT</code> live in <code>tbatch*.asm</code> and
+                <code>tfor.asm</code>.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>ReadBat · EOF · Free_TPA</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                L’état du batch (nom, position, arguments %1…%9) vit
+                dans le <em>résident</em> : le transient peut être
+                rechargé sans perdre AUTOEXEC. En fin de fichier (M037),
+                on nettoie et on revient. Avant un EXEC externe, on peut
+                <code>Free_TPA</code> pour donner le maximum au fils,
+                puis <code>Alloc_TPA</code> (tentative d’aligner sur
+                64 Ko).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Batch state (name, position, %1…%9 arguments) lives in
+                the <em>resident</em>: the transient can be reloaded
+                without losing AUTOEXEC. At end of file (M037), we clean
+                up and return. Before an external EXEC, we may
+                <code>Free_TPA</code> to give the child the maximum,
+                then <code>Alloc_TPA</code> (try to align on 64 KB).
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>INT 2Fh SHELL · INT 2Eh</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Avant <code>READBAT</code>, un INT 2Fh
+                <code>mult_shell_get</code> demande à un « SHELL »
+                (DOSSHELL) s’il a une ligne à injecter. INT 2Eh, côté
+                résident, exécute une ligne unique
+                (<code>SINGLECOM</code>) — c’est ainsi qu’un programme
+                dit à COMMAND « lance ça » sans relancer tout le .COM.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Before <code>READBAT</code>, an INT 2Fh
+                <code>mult_shell_get</code> asks a “SHELL” (DOSSHELL)
+                whether it has a line to inject. INT 2Eh, on the
+                resident side, runs a single line
+                (<code>SINGLECOM</code>) — that is how a program tells
+                COMMAND “run this” without relaunching the whole .COM.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="path">
+        <h2>PATH · $EXEC</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le pont vers la page Processus</span>
+            <span data-lang="en">The bridge to the Processes page</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Nom absent de COMTAB : <code>Path_Search</code>
+                (<code>path1.asm</code>) cherche un exécutable ou un
+                .BAT, d’abord ici, puis dans chaque répertoire de
+                <code>PATH=</code>. Le meilleur chemin va dans
+                <code>EXECPATH</code>. Ensuite le résident construit le
+                bloc <a href="exec.html#exec-fn">EXEC0</a> et appelle
+                INT 21h AH=4Bh — la machine de la page Processus.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Name not in COMTAB: <code>Path_Search</code>
+                (<code>path1.asm</code>) looks for an executable or a
+                .BAT, first here, then in each <code>PATH=</code>
+                directory. The best path goes into
+                <code>EXECPATH</code>. Then the resident builds the
+                <a href="exec.html#exec-fn">EXEC0</a> block and calls
+                INT 21h AH=4Bh — the Processes-page machine.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>Handle01 · redirection</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Avant l’EXEC, le résident peut sauver stdin/stdout
+                (<code>Handle01</code> dans <code>command2.asm</code>)
+                et les rebrancher sur un fichier ou un pipe — c’est le
+                <code>&gt;</code> / <code>&lt;</code> que la page
+                <a href="fichiers.html#stdio">Fichiers</a> décrivait
+                côté SFT. Au retour : restauration, puis ChkSum.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Before EXEC, the resident may save stdin/stdout
+                (<code>Handle01</code> in <code>command2.asm</code>) and
+                aim them at a file or a pipe — the <code>&gt;</code> /
+                <code>&lt;</code> the
+                <a href="fichiers.html#stdio">Files</a> page described
+                on the SFT side. On return: restore, then ChkSum.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>BADEXE · reload</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Rev 1.17 (1982) : une erreur de relocation EXE doit
+                revenir au <em>résident</em>, parce que EXELOAD a pu
+                déjà écraser le transient. Le message
+                <code>ComBad</code> (« Invalid COMMAND.COM ») est fatal
+                si on ne peut plus se relire. <code>EXIT</code> interne
+                ne quitte que si ce n’est pas le COMMAND racine
+                (<code>PermCom</code>) — sinon on reste, il n’y a
+                personne au-dessus.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Rev 1.17 (1982): an EXE relocation error must return to
+                the <em>resident</em>, because EXELOAD may already have
+                overwritten the transient. The <code>ComBad</code>
+                message (“Invalid COMMAND.COM”) is fatal if we can no
+                longer reread ourselves. Internal <code>EXIT</code>
+                leaves only if this is not the root COMMAND
+                (<code>PermCom</code>) — otherwise we stay; there is
+                nobody above.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2><span data-lang="fr">Fichiers sources cités</span><span data-lang="en">Source files cited</span></h2>
+        <div class="file-index">
+          <span>cmd/command/command1.asm<small>architecture 3 parts, INT 23/24/2E</small></span>
+          <span>cmd/command/command2.asm<small>ChkSum, LoadCom, Handle01</small></span>
+          <span>cmd/command/comseg.asm<small>RESGROUP / TRANGROUP</small></span>
+          <span>cmd/command/tcode.asm<small>boucle, priorités PIPE/FOR/BAT</small></span>
+          <span>cmd/command/tdata.asm<small>COMTAB</small></span>
+          <span>cmd/command/tpipe.asm<small>TEMP=, CreateTempFile, swap</small></span>
+          <span>cmd/command/tbatch.asm<small>ReadBat, TPA, Nest</small></span>
+          <span>cmd/command/path1.asm<small>Path_Search → EXECPATH</small></span>
+          <span>cmd/command/readme.txt<small>TRANDATA vs TRANSPACE</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        La coquille referme la boucle : prompt → COMTAB ou PATH →
+        $EXEC → FOO → checksum. Suite possible : le boot
+        (secteur 0 → SYSINIT → ce COMMAND-ci).
+      </p>
+      <p data-lang="en">
+        The shell closes the loop: prompt → COMTAB or PATH → $EXEC →
+        FOO → checksum. Possible sequel: boot (sector 0 → SYSINIT →
+        this very COMMAND).
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+  <script src="js/command.js"></script>
+</body>
+</html>

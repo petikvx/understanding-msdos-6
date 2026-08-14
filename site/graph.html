@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GRAPHICS · GRAFTABL — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="ansi.html">ANSI</a>
+      <a href="graph.html" aria-current="page">GRAPHICS</a>
+      <a href="print.html">PRINT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#graphics">GRAPHICS</a></li><li><a href="#graftabl">GRAFTABL</a></li><li><a href="#ansi">ANSI et PrtSc</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/graphics · cmd/graftabl — OASIS / INT 1Fh</p>
+        <h1>GRAPHICS · GRAFTABL</h1>
+        <p class="lede" data-lang="fr">Deux TSR vidéo. GRAPHICS vole Print Screen pour envoyer le mode graphique à l’imprimante (profils imprimante). GRAFTABL pose 1 Ko de glyphes 128–255 sur INT 1Fh, sans quoi le CGA en SCREEN 1 affiche des poubelles à la place des accentués.</p>
+        <p class="lede" data-lang="en">Two video TSRs. GRAPHICS steals Print Screen to send graphics mode to the printer (printer profiles). GRAFTABL plants 1 KB of glyphs 128–255 on INT 1Fh; without it a CGA in SCREEN 1 shows garbage instead of accented letters.</p>
+      </header>
+
+      <section class="topic" id="graphics">
+        <h2>Shift-PrtSc en CGA</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>INT 5</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le BIOS n’imprime que le mode texte. GRAPHICS remplace INT 5 : lit la mémoire écran, tramage N&amp;B ou couleur selon le profil (<code>.PRO</code> chargé à l’install), parle au LPT. Sans lui, PrtSc en 320×200 donne une page blanche ou n’importe quoi.</p></div>
+            <div data-lang="en"><p>The BIOS only prints text mode. GRAPHICS replaces INT 5: reads screen memory, dithers B&amp;W or colour according to the profile (<code>.PRO</code> loaded at install), talks to LPT. Without it, PrtSc in 320×200 is a blank page or worse.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>GRINST · profils</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Install dans <code>grinst.asm</code>. Chargeurs <code>grload*.asm</code> lisent GRAPHICS.PRO. Impression N&amp;B <code>grbwprt.asm</code>, couleur <code>grcolprt.asm</code>, motifs <code>grpattrn.asm</code>. A002 : libérer l’environnement avant de rester résident (même geste que beaucoup de TSR DOS 4).</p></div>
+            <div data-lang="en"><p>Install in <code>grinst.asm</code>. Loaders <code>grload*.asm</code> read GRAPHICS.PRO. B&amp;W print <code>grbwprt.asm</code>, colour <code>grcolprt.asm</code>, patterns <code>grpattrn.asm</code>. A002: free the environment before going resident (same gesture as many DOS 4 TSRs).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>link puis EXE2BIN</span></summary>
+          <div class="level-body">
+            <pre><code>; graphics.asm
+; LINK GRAPHICS GRINT2FH GRPATTRN GRCTRL GRCPSD
+;      GRCOLPRT GRBWPRT GRINST GRPARSE grparms
+;      GRLOAD GRLOAD2 GRLOAD3
+; EXE2BIN GRAPHICS.EXE GRAPHICS.COM</code></pre>
+            <p class="note">Doc interne « OASIS High Level Design / GRAPHICS I1 Overview ». Multiplex INT 2Fh pour détecter une copie déjà chargée et recharger un profil.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="graftabl">
+        <h2>GRAFTABL 850</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>INT 1Fh → 8×128</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>En texte (SCREEN 0), le CGA a les 256 caractères. En graphique (SCREEN 1), seuls 0–127 sont dans le ROM. 128–255 sont dessinés d’après la table pointée par INT 1Fh, souvent <code>0000:0000</code>. GRAFTABL y met 1024 octets (8 lignes × 128) et reste.</p></div>
+            <div data-lang="en"><p>In text (SCREEN 0), the CGA has all 256 characters. In graphics (SCREEN 1), only 0–127 live in ROM. 128–255 are drawn from the table pointed to by INT 1Fh, often <code>0000:0000</code>. GRAFTABL puts 1024 bytes there (8 rows × 128) and stays.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>437 850 852 860 863 865</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une table par page : USA, multilingual, Latin II, Portuguese, Canadian French, Nordic. <code>/STATUS</code> interroge le multiplex <code>B0h</code> pour savoir laquelle est chargée — on peut redéfinir sans empiler un second Ko.</p></div>
+            <div data-lang="en"><p>One table per page: USA, multilingual, Latin II, Portuguese, Canadian French, Nordic. <code>/STATUS</code> asks multiplex <code>B0h</code> which one is loaded — you can redefine without stacking a second kilobyte.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>grtab.asm · MY_MULTIPLEX_NUMBER</span></summary>
+          <div class="level-body">
+            <p class="note">Fichiers <code>grtabus.asm</code>, <code>grtabml.asm</code>, <code>grtabpo.asm</code>… : les bitmaps. Handler dans <code>grtabhan.asm</code>. Copyright 1981–1991 : un des plus vieux utilitaires encore dans l’arbre.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="ansi">
+        <h2>Le choc ANSI</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>M001 30-Jan-91</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>ANSI.SYS change de mode vidéo (y compris via une séquence « alt-prt-sc select »). Ça réinstalle l’INT 5 du BIOS — GRAPHICS disparaît. Correctif : GRAPHICS crochète aussi INT 10h et remet son INT 5 quand ANSI a parlé.</p></div>
+            <div data-lang="en"><p>ANSI.SYS changes video mode (including via an “alt-prt-sc select” sequence). That reinstalls the BIOS INT 5 — GRAPHICS vanishes. Fix: GRAPHICS also hooks INT 10h and puts its INT 5 back after ANSI has spoken.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>MODE CON</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>MODE 40/80 et GRAFTABL se marchent moins dessus (GRAFTABL ne dépend que d’INT 1Fh). GRAPHICS + MODE + ANSI : trois habitants de la même carte, d’où M001.</p></div>
+            <div data-lang="en"><p>MODE 40/80 and GRAFTABL step on each other less (GRAFTABL only depends on INT 1Fh). GRAPHICS + MODE + ANSI: three tenants of the same card, hence M001.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>grint2fh.asm</span></summary>
+          <div class="level-body">
+            <p class="note">« New int 10 handler to trap alt-prt-sc select calls made by ANSI.SYS. For these calls, we need to reinstall our int 5 handler again. » — NSM, 30-Jan-91.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/graphics/graphics.asm<small>entry, EXE2BIN, OASIS</small></span>
+          <span>cmd/graphics/grint2fh.asm<small>INT 2Fh, M001 INT 10/ANSI</small></span>
+          <span>cmd/graftabl/grtab.asm<small>INT 1Fh, pages 437–865</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">L’aide qui n’est qu’un <code>/?</code> délégué : <a href="aide.html">HELP</a>.</p>
+    <p data-lang="en">Help that is just a delegated <code>/?</code>: <a href="aide.html">HELP</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

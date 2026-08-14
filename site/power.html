@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>POWER — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="config.html">CONFIG</a>
+      <a href="power.html" aria-current="page">POWER</a>
+      <a href="int21.html">INT 21h</a>
+      <a href="print.html">PRINT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#idle">Idle</a></li><li><a href="#apm">APM</a></li><li><a href="#hlt">HLT · V86</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">bios/power.asm · « IDLE DETECTION DEVICE DRIVER »</p>
+        <h1>POWER.SYS</h1>
+        <p class="lede" data-lang="fr">Quand COMMAND attend une touche, le CPU tourne à vide. POWER détecte ces idles (INT 28, INT 2Fh, boucles clavier) et demande au BIOS APM d’endormir le processeur. SYSINIT l’appelle après les stubs HIGH (M072) pour qu’il accroche INT 2Fh correctement.</p>
+        <p class="lede" data-lang="en">When COMMAND waits for a key, the CPU spins. POWER spots those idles (INT 28, INT 2Fh, keyboard loops) and asks the APM BIOS to sleep the processor. SYSINIT calls it after the HIGH stubs (M072) so it hooks INT 2Fh correctly.</p>
+      </header>
+      <section class="topic" id="idle">
+        <h2>Détecter le rien</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>POWER.EXE / POWER.SYS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Version standalone et version résidente fusionnées (juin 1991, MD). Même public que PRINT : les moments où DOS dit « je m’ennuie ».</p></div>
+            <div data-lang="en"><p>Standalone and resident versions merged (June 1991, MD). Same audience as PRINT: the moments DOS says “I am bored”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>INT 1Ch · CPU_IDLE</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>M004 : compter le temps idle sur INT 1Ch (tic horloge). Un resume APM sans suspend préalable est ignoré (resumes multiples). M002 : l’accroche INT 14 (série) avait été commentée — l’impression ralentissait.</p></div>
+            <div data-lang="en"><p>M004: count idle time on INT 1Ch (timer tick). An APM resume without a prior suspend is ignored (multiple resumes). M002: the INT 14 (serial) hook had been commented out — printing slowed down.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>M003 IOCTL retiré</span></summary>
+          <div class="level-body">
+            <p class="note">Le reste du support IOCTL a été enlevé (29/8/91). POWER se commande surtout par la ligne <code>POWER</code> et par APM, plus par AH=44h.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="apm">
+        <h2>APM</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>M001 août 1991</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Advanced Power Management : le BIOS portable expose suspend / resume. POWER s’y branche. Sans APM, il reste le HLT.</p></div>
+            <div data-lang="en"><p>Advanced Power Management: the laptop BIOS exposes suspend / resume. POWER hooks it. Without APM, HLT remains.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Do_APM_Enable_Disable</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>M005 : remettre d’aplomb les far calls dans le driver résident BIOS (near vs far). ROMDOS a forcé la séparation CODE / DATA / INIT.</p></div>
+            <div data-lang="en"><p>M005: straighten far calls in the BIOS-resident driver (near vs far). ROMDOS forced the CODE / DATA / INIT split.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>Power_Init</span></summary>
+          <div class="level-body">
+            <p class="note">SYSINIT (M072) : après les stubs DOS HIGH, pour que POWER accroche INT 2Fh une fois le multiplex en place — pas trop tôt.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="hlt">
+        <h2>HLT et V86</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Endormir sans tout casser</span>
+            <span data-lang="en">Sleep without breaking everything</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>HLT arrête le 8086 jusqu’à la prochaine IRQ. Sous EMM386 (V86), HLT est piégé : il faut demander au moniteur, pas exécuter l’opcode n’importe comment.</p></div>
+            <div data-lang="en"><p>HLT stops the 8086 until the next IRQ. Under EMM386 (V86), HLT is trapped: you must ask the monitor, not just fire the opcode.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>CheckV86</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>M004 / bug 2587 : ne tester V86 que pour le chemin HLT, pas pour OEM_IDLE ni APM_IDLE. Sinon on refuse à tort des idles APM sous EMM386.</p></div>
+            <div data-lang="en"><p>M004 / bug 2587: only test V86 on the HLT path, not OEM_IDLE or APM_IDLE. Otherwise we wrongly refuse APM idles under EMM386.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>POWERALONE</span></summary>
+          <div class="level-body">
+            <p class="note">JRCB a renommé STANDALONE en POWERALONE : collision avec une variable de ROMDRIVE. Les petits noms globaux se marchent dessus dans un monolithe.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>bios/power.asm<small>idle, APM, HLT, historique</small></span>
+          <span>dev/power/<small>outils, lmul</small></span>
+          <span>bios/sysinit1.asm<small>Power_Init M072</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Accélérer les OPEN plutôt que le CPU : <a href="fastopen.html">FASTOPEN</a>.</p>
+    <p data-lang="en">Speed up OPEN rather than the CPU: <a href="fastopen.html">FASTOPEN</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

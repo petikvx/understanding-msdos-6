@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PRINT — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="command.html">COMMAND</a>
+      <a href="print.html" aria-current="page">PRINT</a>
+      <a href="int21.html">INT 21h</a>
+      <a href="int24.html">INT 24</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#res">Résident / transient</a></li><li><a href="#idle">INT 28</a></li><li><a href="#queue">File d’attente</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/print/print_r.asm · print_t.asm</p>
+        <h1>PRINT</h1>
+        <p class="lede" data-lang="fr">Le spouleur : même architecture que <a href="command.html">COMMAND.COM</a> — un résident qui imprime pendant que vous travaillez, un transient pour <code>PRINT fichier.txt</code>. Il vole des tranches de temps sur INT 28 (idle) et doit pouvoir appeler <code>AH=59h</code> depuis un INT 24.</p>
+        <p class="lede" data-lang="en">The spooler: same architecture as <a href="command.html">COMMAND.COM</a> — a resident that prints while you work, a transient for <code>PRINT file.txt</code>. It steals time slices on INT 28 (idle) and must be able to call <code>AH=59h</code> from INT 24.</p>
+      </header>
+      <section class="topic" id="res">
+        <h2>Deux moitiés</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>print_r · print_t</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le premier lancement installe le résident et reste. Les suivants ne font que passer des noms de fichiers au TSR via INT 2Fh. <code>TransSize</code> / <code>TransRet</code> mesurent la partie jetable.</p></div>
+            <div data-lang="en"><p>The first launch installs the resident and stays. Later ones only pass file names to the TSR via INT 2Fh. <code>TransSize</code> / <code>TransRet</code> measure the disposable part.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>STDPRN</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La sortie va au handle 4 (<a href="fichiers.html#stdio">STDPRN</a>) ou à un device donné (/D:). IOCTL peut passer PRN en raw pour ne pas interpréter les tabs.</p></div>
+            <div data-lang="en"><p>Output goes to handle 4 (<a href="fichiers.html#stdio">STDPRN</a>) or a given device (/D:). IOCTL can put PRN in raw so tabs are not interpreted.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>print_rm / print_tm</span></summary>
+          <div class="level-body">
+            <p class="note">Les fichiers <code>*_rm</code> / <code>*_tm</code> sont les messages. <code>pridefs.inc</code> : structures de la file. Même idée RES/TRAN que COMMAND, à plus petite échelle.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="idle">
+        <h2>INT 28 · idle</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Imprimer quand DOS s’ennuie</span>
+            <span data-lang="en">Print when DOS is bored</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Quand COMMAND attend une touche, DOS émet INT 28. PRINT en profite pour envoyer un caractère à l’imprimante. Le dispatcher coupe INT 28 sur DskStack (<code>IdleInt=0</code>) : pas d’impression au milieu d’un WRITE disque.</p></div>
+            <div data-lang="en"><p>When COMMAND waits for a key, DOS issues INT 28. PRINT uses that to send a character to the printer. The dispatcher turns INT 28 off on DskStack (<code>IdleInt=0</code>): no printing in the middle of a disk WRITE.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>M001 retiré</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>5/31/91 : on avait ajouté le spool aussi sur les idle INT 2Fh. 8/5/91 : retiré pour DOS 5, « à remettre dans une version future ». DOS 6 livre encore le retrait.</p></div>
+            <div data-lang="en"><p>31 May 91: spooling was also added on INT 2Fh idles. 5 Aug 91: backed out for DOS 5, “reinstate in a future version”. DOS 6 still ships the pull-out.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>SPOOLINT</span></summary>
+          <div class="level-body">
+            <p class="note"><code>msctrlc.asm</code> exporte <code>SPOOLINT</code>. PRINT + INT 24 : GetExtendedError doit rester sur AuxStack — déjà commenté dans le dispatcher.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="queue">
+        <h2>La file</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>/Q · /T · /C</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une liste de noms, un fichier en cours. /T vide tout, /C annule le courant. Le résident ouvre les fichiers lui-même (handles) pendant que vous êtes dans EDIT.</p></div>
+            <div data-lang="en"><p>A list of names, one file in progress. /T clears all, /C cancels the current. The resident opens the files itself (handles) while you sit in EDIT.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>InDos</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>PRINT regarde <code>InDos</code> avant d’appeler le noyau. Réentrer dans INT 21h au mauvais moment = pile détruite. D’où INT 28 seulement quand DOS est « idle-but-safe ».</p></div>
+            <div data-lang="en"><p>PRINT looks at <code>InDos</code> before calling the kernel. Re-entering INT 21h at the wrong time = smashed stack. Hence INT 28 only when DOS is “idle-but-safe”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>A002 LPT3</span></summary>
+          <div class="level-body">
+            <p class="note">PTM : <code>DIR &gt; LPT3</code> se bloquait — msctrlc A002. Les redirections vers un spouleur et PRINT lui-même se marchaient dessus.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/print/print_r.asm<small>résident, idle</small></span>
+          <span>cmd/print/print_t.asm<small>ligne de commande</small></span>
+          <span>dos/msdisp.asm<small>IdleInt, AH=59h</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Un autre résident « culturel » : KEYB, pour taper autre chose que QWERTY.</p>
+    <p data-lang="en">Another cultural resident: KEYB, to type something other than QWERTY.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

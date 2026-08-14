@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FORMAT — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="chkdsk.html">CHKDSK</a>
+        <a href="format.html" aria-current="page">FORMAT</a>
+        <a href="fdisk.html">FDISK</a>
+        <a href="boot.html">Boot</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#safe"><span data-lang="fr">Format « sûr »</span><span data-lang="en">Safe format</span></a></li>
+        <li><a href="#ecrit"><span data-lang="fr">Ce qu’on écrit</span><span data-lang="en">What is written</span></a></li>
+        <li><a href="#sys">/S · SYS</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/format/ · safefmt.doc</p>
+        <h1>FORMAT</h1>
+        <p class="lede" data-lang="fr">L’outil qui pose le décor de la page FAT : secteur d’amorçage, FAT vides, racine vide. Sous MS-DOS 6, par défaut, il ne rase plus toute la zone données — d’où UNFORMAT.</p>
+        <p class="lede" data-lang="en">The tool that sets the FAT page’s scenery: boot sector, empty FATs, empty root. Under MS-DOS 6, by default it no longer wipes the whole data area — hence UNFORMAT.</p>
+      </header>
+
+      <section class="topic" id="safe">
+        <h2>
+          <span data-lang="fr">Safe format</span>
+          <span data-lang="en">Safe format</span>
+        </h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Les fichiers ne sont pas vraiment effacés</span>
+            <span data-lang="en">The files are not really erased</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DOS 5/6 : FORMAT sauve assez d’informations (et laisse les clusters de données) pour qu’UNFORMAT reconstruise l’ancien volume. <code>/U</code> (unconditional) revient à l’ancien comportement destructeur. C’est le même principe que DIRFREE <code>E5h</code> : on marque, on n’écrase pas.</p></div>
+            <div data-lang="en"><p>DOS 5/6: FORMAT saves enough information (and leaves data clusters) that UNFORMAT can rebuild the old volume. <code>/U</code> (unconditional) is the old destructive behaviour. Same idea as DIRFREE <code>E5h</code>: we mark, we do not overwrite.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>safe.inc · switch_s</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les modules <code>safe.inc</code>, <code>safedef.inc</code>, <code>switch_s.asm</code> implémentent la sauvegarde et le switch /S (système). <code>forlabel.asm</code> écrit le libellé 11 caractères dans le BPB étendu (signature 41).</p></div>
+            <div data-lang="en"><p>Modules <code>safe.inc</code>, <code>safedef.inc</code>, <code>switch_s.asm</code> implement the save and the /S (system) switch. <code>forlabel.asm</code> writes the 11-character label into the extended BPB (signature 41).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>dskfrmt.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Le formatage « bas niveau » des pistes (disquette) est dans <code>dskfrmt.asm</code> via INT 13h. Sur disque dur, on ne reformate généralement pas les secteurs : on réécrit boot + FAT + racine. <code>MSG_FMT_FAT_ERROR</code> si l’écriture de la FAT échoue.</p>
+            <p class="note" data-lang="en">Low-level track format (floppy) is in <code>dskfrmt.asm</code> via INT 13h. On a hard disk we usually do not reformat sectors: we rewrite boot + FAT + root. <code>MSG_FMT_FAT_ERROR</code> if writing the FAT fails.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="ecrit">
+        <h2>
+          <span data-lang="fr">Anatomie posée sur le disque</span>
+          <span data-lang="en">Anatomy laid on disk</span>
+        </h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le dessin de la page FAT, pour de vrai</span>
+            <span data-lang="en">The FAT-page drawing, for real</span></summary>
+          <div class="level-body">
+            <div class="volume-bar" aria-hidden="true">
+              <span class="boot">Boot</span><span class="fat1">FAT1=0</span><span class="fat2">FAT2=0</span><span class="root">Root</span><span class="data">Data</span>
+            </div>
+            <p data-lang="fr">Cluster 0/1 de la FAT reçoivent le descripteur média. Le reste est à zéro (libre). La racine est pleine de <code>00</code> (fin d’annuaire, pas <code>E5</code>).</p>
+            <p data-lang="en">FAT clusters 0/1 get the media descriptor. The rest is zero (free). The root is full of <code>00</code> (end of directory, not <code>E5</code>).</p>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>PHYDRV · numéro de série</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le boot écrit doit coller à ce que <a href="boot.html">msboot</a> attend : PHYDRV au bon offset, BPB 2.0/4.x, pas le layout 3.0. Le numéro de série (DWORD) est tiré de la date/heure. <code>EXT_SYSTEM_ID</code> reçoit souvent <code>FAT12</code> / <code>FAT16</code>.</p></div>
+            <div data-lang="en"><p>The written boot must match what <a href="boot.html">msboot</a> expects: PHYDRV at the right offset, BPB 2.0/4.x, not the 3.0 layout. The serial (DWORD) comes from the date/time. <code>EXT_SYSTEM_ID</code> often gets <code>FAT12</code> / <code>FAT16</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>phase1.asm · msfor.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr"><code>phase1.asm</code> orchestre les étapes. <code>msfor.asm</code> le cœur Microsoft. Les tailles de cluster par capacité du volume sont des tables — plus le disque est gros, plus le cluster l’est (gaspillage déjà décrit en FAT).</p>
+            <p class="note" data-lang="en"><code>phase1.asm</code> orchestrates the steps. <code>msfor.asm</code> is the Microsoft core. Cluster sizes by volume capacity are tables — the larger the disk, the larger the cluster (waste already described under FAT).</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sys">
+        <h2>/S</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Rendre le disque amorçable</span>
+            <span data-lang="en">Make the disk bootable</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>/S copie IO.SYS, MSDOS.SYS, COMMAND.COM et pose le secteur de boot. Les fichiers système doivent être les premiers clusters, contigus — sinon <a href="boot.html">msboot</a> ne les charge pas.</p></div>
+            <div data-lang="en"><p>/S copies IO.SYS, MSDOS.SYS, COMMAND.COM and plants the boot sector. The system files must be the first clusters, contiguous — otherwise <a href="boot.html">msboot</a> will not load them.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>cmd/sys</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La commande <code>SYS</code> seule fait la même copie sans reformater. Elle échoue si la place en tête est prise par un fichier ordinaire — d’où « No room for system files ».</p></div>
+            <div data-lang="en"><p>The <code>SYS</code> command alone does the same copy without reformatting. It fails if the front space is taken by an ordinary file — hence “No room for system files”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>switch_s.asm</span></summary>
+          <div class="level-body">
+            <p class="note"><code>IBMLOADSIZE</code> encore : SYS doit écrire au moins 3 secteurs consécutifs pour IO.SYS avant de s’arrêter.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/format/format.asm<small>entrée, switches</small></span>
+          <span>cmd/format/dskfrmt.asm<small>INT 13h pistes</small></span>
+          <span>cmd/format/forlabel.asm<small>libellé, série</small></span>
+          <span>cmd/format/switch_s.asm<small>/S</small></span>
+          <span>cmd/sys<small>copie système seule</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Avant de formater un disque dur, on le découpe : <a href="fdisk.html">FDISK</a>.</p>
+    <p data-lang="en">Before formatting a hard disk, we carve it: <a href="fdisk.html">FDISK</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

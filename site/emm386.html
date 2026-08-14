@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EMM386 — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="himem.html">HIMEM</a>
+      <a href="emm386.html" aria-current="page">EMM386</a>
+      <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+      <a href="smartdrv.html">SMARTDRV</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#v86">V86</a></li><li><a href="#ems">EMS · UMB</a></li><li><a href="#vcpi">VCPI</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/emm386/ · CEMM</p>
+        <h1>EMM386</h1>
+        <p class="lede" data-lang="fr">Le cousin de <a href="himem.html">HIMEM</a> : un 386 en mode V86 qui fabrique de la mémoire paginée (EMS) <em>et</em> les UMB entre 640 Ko et 1 Mo. Le dépôt s’appelle encore CEMM — Compaq Expanded Memory Manager, 1986.</p>
+        <p class="lede" data-lang="en">HIMEM’s cousin: a 386 in V86 mode that builds paged memory (EMS) <em>and</em> UMBs between 640 KB and 1 MB. The tree is still named CEMM — Compaq Expanded Memory Manager, 1986.</p>
+      </header>
+      <section class="topic" id="v86">
+        <h2>Mode V86</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">DOS croit être en réel, le 386 mappe</span>
+            <span data-lang="en">DOS thinks it is real-mode; the 386 maps</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sans ça, les adresses 640K–1M sont des ROM. EMM386 pose des pages RAM à la place (fenêtres EMS, UMB). DOS et les programmes 16 bits continuent comme si de rien n’était.</p></div>
+            <div data-lang="en"><p>Without it, 640K–1M is ROM. EMM386 maps RAM pages there instead (EMS windows, UMBs). DOS and 16-bit programs carry on as if nothing happened.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>DMA · A20 · I/O traps</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le DMA ne connaît pas la pagination : <code>dmatrap.asm</code>, <code>dmaserv.asm</code>. A20 est aussi piégé (<code>a20trap.asm</code>) — HIMEM et EMM386 doivent se parler (<code>xms.asm</code>). <code>iotrap.asm</code>, <code>pictrap.asm</code> : ports et interruptions.</p></div>
+            <div data-lang="en"><p>DMA does not know paging: <code>dmatrap.asm</code>, <code>dmaserv.asm</code>. A20 is trapped too (<code>a20trap.asm</code>) — HIMEM and EMM386 must talk (<code>xms.asm</code>). <code>iotrap.asm</code>, <code>pictrap.asm</code>: ports and IRQs.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>.386p · i386.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Le module s’assemble en <code>.386p</code>. <code>modesw.asm</code> / <code>retreal.asm</code> : aller-retour réel ↔ V86. <code>lhvxd/</code> : un VxD <code>loadhi</code> pour Windows.</p>
+            <p class="note" data-lang="en">The module assembles as <code>.386p</code>. <code>modesw.asm</code> / <code>retreal.asm</code>: real ↔ V86. <code>lhvxd/</code>: a <code>loadhi</code> VxD for Windows.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="ems">
+        <h2>EMS et UMB</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Deux cadeaux d’une même machine</span>
+            <span data-lang="en">Two gifts from one machine</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>EMS : une fenêtre (souvent D000) où l’on fait défiler des pages de 16 Ko — les vieux jeux. UMB : des blocs stables que DOS enchaîne (<a href="memoire.html#umb">HIGH_FIRST</a>, <code>DEVICEHIGH</code>).</p></div>
+            <div data-lang="en"><p>EMS: a window (often D000) through which 16 KB pages scroll — old games. UMBs: stable blocks DOS chains (<a href="memoire.html#umb">HIGH_FIRST</a>, <code>DEVICEHIGH</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>emm40.asm · umbseg.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>EMS 4.0 dans <code>emm40.asm</code> / <code>emmfunct.asm</code>. Les UMB sont exposées via XMS aussi. Il faut HIMEM <em>avant</em> EMM386 dans CONFIG.SYS.</p></div>
+            <div data-lang="en"><p>EMS 4.0 lives in <code>emm40.asm</code> / <code>emmfunct.asm</code>. UMBs are also exposed via XMS. HIMEM must come <em>before</em> EMM386 in CONFIG.SYS.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>INT 67h</span></summary>
+          <div class="level-body">
+            <p class="note">L’API EMS historique est INT 67h, distincte de INT 21h et de XMS (INT 2Fh). <code>emm.asm</code> est l’interface.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="vcpi">
+        <h2>VCPI · Windows</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Laisser un autre prendre le 386</span>
+            <span data-lang="en">Let someone else take the 386</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DOS extenders (DOS/4GW, etc.) veulent le mode protégé. VCPI (<code>vcpi.asm</code>) est le protocole pour « emprunter » le processeur à EMM386. Windows a ses propres modules <code>winemm.asm</code>, <code>winsrch.asm</code>.</p></div>
+            <div data-lang="en"><p>DOS extenders (DOS/4GW, etc.) want protected mode. VCPI (<code>vcpi.asm</code>) is the protocol to “borrow” the CPU from EMM386. Windows has its own <code>winemm.asm</code>, <code>winsrch.asm</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>NOEMS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Souvent on charge EMM386 avec <code>NOEMS</code> : pas de fenêtre EMS, seulement des UMB pour <code>LOADHIGH</code>. Moins de conflits avec Windows 3.1 en mode 386.</p></div>
+            <div data-lang="en"><p>Often EMM386 is loaded with <code>NOEMS</code>: no EMS window, only UMBs for <code>LOADHIGH</code>. Fewer clashes with Windows 3.1 in 386 mode.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>except.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Les fautes de page / exceptions 386 sont dans <code>except.asm</code>, <code>errhndlr.asm</code>. Un programme réel qui touche un port piégé réveille EMM386 — d’où la lenteur parfois visible.</p>
+            <p class="note" data-lang="en">386 page faults / exceptions live in <code>except.asm</code>, <code>errhndlr.asm</code>. A real-mode program touching a trapped port wakes EMM386 — hence the occasional slowness.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/emm386/emm.asm<small>interface EMS, héritage CEMM/Compaq</small></span>
+          <span>dev/emm386/vcpi.asm · winemm.asm<small>extenders, Windows</small></span>
+          <span>dev/emm386/dmatrap.asm · a20trap.asm<small>DMA, A20</small></span>
+          <span>dev/emm386/umbseg.asm<small>UMB</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">SMARTDRV, juste après, se sert souvent de la XMS que HIMEM+EMM386 exposent.</p>
+    <p data-lang="en">SMARTDRV, next, often uses the XMS that HIMEM+EMM386 expose.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

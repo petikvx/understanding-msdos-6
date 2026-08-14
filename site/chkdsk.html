@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CHKDSK — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="chkdsk.html" aria-current="page">CHKDSK</a>
+        <a href="format.html">FORMAT</a>
+        <a href="fdisk.html">FDISK</a>
+        <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#fatmap">FATMAP</a></li>
+        <li><a href="#orphelins"><span data-lang="fr">Orphelins</span><span data-lang="en">Orphans</span></a></li>
+        <li><a href="#cross">Cross-links</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/chkdsk/chkfat.asm · chkproc.asm</p>
+        <h1>CHKDSK</h1>
+        <p class="lede" data-lang="fr">L’inspecteur de la page <a href="fat.html">FAT</a> : il reconstruit en mémoire une carte de chaque cluster, confronte les chaînes des répertoires, et propose de ramasser les maillons perdus dans <code>FILE0000.CHK</code>.</p>
+        <p class="lede" data-lang="en">The inspector for the <a href="fat.html">FAT</a> page: it rebuilds an in-memory map of every cluster, checks directory chains, and offers to gather lost links into <code>FILE0000.CHK</code>.</p>
+      </header>
+
+      <section class="topic" id="fatmap">
+        <h2>FATMAP</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Une photocopie de la table, pour compter</span>
+            <span data-lang="en">A photocopy of the table, to count</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>CHKDSK ne fait pas confiance au <code>dpb_free_cnt</code> du noyau. Il se fait sa propre carte (<code>FATMAP</code>) : pour chaque cluster, « vu dans un fichier », « libre », « mauvais ». Deux passes si besoin.</p></div>
+            <div data-lang="en"><p>CHKDSK does not trust the kernel’s <code>dpb_free_cnt</code>. It builds its own map (<code>FATMAP</code>): for each cluster, “seen in a file”, “free”, “bad”. Two passes if needed.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>BIGFAT · EOFVAL · BADVAL</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même seuil 12/16 bits que le noyau. <code>EOFVAL</code> / <code>BADVAL</code> reprennent FF8/FFF7. <code>DIRTYFAT</code> : on a modifié la table (après /F). <code>FRAGMENT</code> compte les sauts de chaîne — le rapport « contains n non-contiguous blocks ».</p></div>
+            <div data-lang="en"><p>Same 12/16-bit threshold as the kernel. <code>EOFVAL</code> / <code>BADVAL</code> reuse FF8/FFF7. <code>DIRTYFAT</code>: we changed the table (after /F). <code>FRAGMENT</code> counts chain jumps — the “contains n non-contiguous blocks” report.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>chkfat.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Titre du module : « procedures that acces the fat and/or fatmap » (faute d’origine). Messages : <code>h/utilmid.h</code> déjà cités sur la page FAT (<code>MSG_CHK_LOST_CLUSTERS</code>, <code>MSG_CHK_BAD_FAT</code>).</p>
+            <p class="note" data-lang="en">Module title: “procedures that acces the fat and/or fatmap” (original typo). Messages: <code>h/utilmid.h</code> already cited on the FAT page (<code>MSG_CHK_LOST_CLUSTERS</code>, <code>MSG_CHK_BAD_FAT</code>).</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="orphelins">
+        <h2>
+          <span data-lang="fr">Clusters perdus</span>
+          <span data-lang="en">Lost clusters</span>
+        </h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>FILE0000.CHK</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Occupés dans la FAT, absents de tout répertoire : un programme est mort au milieu d’une écriture (page <a href="fat.html#cycle">cycle de vie</a>). /F les enchaîne en fichiers dans la racine. Sans /F, CHKDSK ne fait que compter (<code>ORPHCNT</code>, <code>ORPHSIZ</code>).</p></div>
+            <div data-lang="en"><p>Busy in the FAT, absent from every directory: a program died mid-write (<a href="fat.html#cycle">life cycle</a> page). /F chains them into files in the root. Without /F, CHKDSK only counts (<code>ORPHCNT</code>, <code>ORPHSIZ</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>ORPHFCB</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les orphelins sont créés via un FCB interne (<code>ORPHFCB</code>, extension dans <code>ORPHEXT</code>) — l’API antique de la page <a href="fichiers.html#fcb">Fichiers</a>, plus simple ici qu’un handle. <code>DOFIX</code> / <code>HAVFIX</code> décident si l’on écrit.</p></div>
+            <div data-lang="en"><p>Orphans are created through an internal FCB (<code>ORPHFCB</code>, extension in <code>ORPHEXT</code>) — the old API from the <a href="fichiers.html#fcb">Files</a> page, simpler here than a handle. <code>DOFIX</code> / <code>HAVFIX</code> decide whether we write.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>SECONDPASS</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Première passe : marquer les chaînes des répertoires. Seconde : ce qui reste occupé et non marqué est orphelin. Commentaire dans <code>chkproc.asm</code> : les fichiers « plus bas » peuvent <em>apparaître</em> comme lost clusters si on gère mal l’ordre.</p>
+            <p class="note" data-lang="en">First pass: mark directory chains. Second: whatever is still busy and unmarked is orphaned. Comment in <code>chkproc.asm</code>: files “further down” can <em>look</em> like lost clusters if order is handled badly.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="cross">
+        <h2>Cross-links</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Deux fichiers, le même cluster</span>
+            <span data-lang="en">Two files, the same cluster</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La FAT dit « suivant = 47 » pour deux chaînes différentes. Écrire dans l’un détruit l’autre. CHKDSK le signale (<code>CROSSCNT</code>) ; la réparation est plus délicate que pour un orphelin.</p></div>
+            <div data-lang="en"><p>The FAT says “next = 47” for two different chains. Writing one destroys the other. CHKDSK reports it (<code>CROSSCNT</code>); repair is thornier than for an orphan.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>CROSSLOOK</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Pendant le parcours d’une chaîne, <code>CROSSCHK</code> regarde si le cluster était déjà marqué dans FATMAP. NZ → <code>CROSSLINK</code>, incrément de <code>ISCROSS</code>, message <code>CROSS_arg</code>.</p></div>
+            <div data-lang="en"><p>While walking a chain, <code>CROSSCHK</code> asks whether the cluster was already marked in FATMAP. NZ → <code>CROSSLINK</code>, increment <code>ISCROSS</code>, message <code>CROSS_arg</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>chkproc.asm</span></summary>
+          <div class="level-body">
+            <figure class="source"><figcaption>cmd/chkdsk/chkproc.asm</figcaption>
+<pre><code>CROSSLOOK:
+        CALL    CROSSCHK
+        JNZ     CROSSLINK
+        …
+CROSSLINK:
+        INC     [ISCROSS]
+        MOV     DX, OFFSET DG:CROSS_arg</code></pre></figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/chkdsk/chkfat.asm<small>FATMAP, BIGFAT, dirty</small></span>
+          <span>cmd/chkdsk/chkproc.asm<small>CROSSLOOK, orphelins</small></span>
+          <span>cmd/chkdsk/chkinit.asm<small>init, compteurs</small></span>
+          <span>h/utilmid.h<small>messages</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Si la carte est trop abîmée, on reformate : <a href="format.html">FORMAT</a>.</p>
+    <p data-lang="en">If the map is too broken, we reformat: <a href="format.html">FORMAT</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

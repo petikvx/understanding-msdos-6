@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MODE — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="ioctl.html">IOCTL</a>
+      <a href="mode.html" aria-current="page">MODE</a>
+      <a href="nls.html">NLS</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#ecran">Écran</a></li><li><a href="#com">COM · LPT</a></li><li><a href="#cp">Pages de codes</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/mode/ — 16 fichiers .asm</p>
+        <h1>MODE</h1>
+        <p class="lede" data-lang="fr">Le couteau suisse IOCTL de la ligne de commande : 80/40 colonnes, baud du COM1, redirection LPT1→COM1, préparation d’une page de codes. Presque tout est un <code>AH=44h</code> habillé.</p>
+        <p class="lede" data-lang="en">The command-line IOCTL Swiss army knife: 80/40 columns, COM1 baud, LPT1→COM1 redirect, code-page prep. Almost everything is a dressed-up <code>AH=44h</code>.</p>
+      </header>
+      <section class="topic" id="ecran">
+        <h2>MODE CO80 · MODE 40</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>INT 10h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Change le mode texte. ANSI et GRAFTABL s’en soucient ensuite. Sans MODE, le BIOS reste dans le mode où le boot l’a laissé.</p></div>
+            <div data-lang="en"><p>Changes the text mode. ANSI and GRAFTABL care afterwards. Without MODE, the BIOS stays in whatever the boot left.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>lignes 25/43/50</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>MODE CON LINES=43 parle à EGA/VGA. /L d’ANSI peut ensuite figer ce nombre. Les deux se marchent sur les pieds si on les mélange.</p></div>
+            <div data-lang="en"><p>MODE CON LINES=43 talks to EGA/VGA. ANSI’s /L can then freeze that count. The two step on each other if mixed carelessly.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>cmd/mode/*.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Le binaire est découpé par périphérique (vidéo, COM, LPT, code page). Un parseur commun, puis un saut vers le module.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="com">
+        <h2>Série et parallèle</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>MODE COM1:9600,N,8,1</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>IOCTL sur le handle AUX/COM. Interlnk et PRINT en dépendent. MODE LPT1=COM1 redirige le handle 4.</p></div>
+            <div data-lang="en"><p>IOCTL on the AUX/COM handle. Interlnk and PRINT depend on it. MODE LPT1=COM1 redirects handle 4.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>retry P/B/N</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Busy, None, Error : que faire si l’imprimante n’est pas prête — avant même INT 24. PRINT a sa propre file par-dessus.</p></div>
+            <div data-lang="en"><p>Busy, None, Error: what to do if the printer is not ready — even before INT 24. PRINT has its own queue on top.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>generic IOCTL</span></summary>
+          <div class="level-body">
+            <p class="note">Les paramètres série (baud, parité) sont le generic IOCTL « send to device » de <code>ioctl.inc</code>, pas un appel BIOS direct — pour que le driver COM puisse être un substitut.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="cp">
+        <h2>MODE CON CP</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>PREP · SEL</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Prépare une page (charge le .CPI), puis SELECT. CHCP (COMMAND) parle à NLSFUNC ; MODE parle à DISPLAY.SYS. Les deux sont requis pour un AZERTY complet.</p></div>
+            <div data-lang="en"><p>Prepare a page (load the .CPI), then SELECT. CHCP (COMMAND) talks to NLSFUNC; MODE talks to DISPLAY.SYS. Both are required for a complete AZERTY setup.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>STATUS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>MODE sans argument : état des devices. Utile pour voir si LPT1 est encore redirigé après un PRINT /T.</p></div>
+            <div data-lang="en"><p>MODE with no argument: device status. Handy to see if LPT1 is still redirected after PRINT /T.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>16 .asm</span></summary>
+          <div class="level-body">
+            <p class="note">Plus gros que la plupart des externes de <code>cmd/</code> hors FORMAT/FDISK. C’est un mini-shell de configuration matériel.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index"><span>cmd/mode/<small>16 .asm, IOCTL vidéo / COM / LPT / CP</small></span></div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Copier une disquette secteur par secteur : <a href="diskcopy.html">DISKCOPY</a>.</p>
+    <p data-lang="en">Copy a floppy sector by sector: <a href="diskcopy.html">DISKCOPY</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

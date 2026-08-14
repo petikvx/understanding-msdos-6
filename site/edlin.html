@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EDLIN — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="doskey.html">DOSKEY</a>
+      <a href="edlin.html" aria-current="page">EDLIN</a>
+      <a href="debug.html">DEBUG</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#lignes">Éditeur de lignes</a></li><li><a href="#hist">De 1.02 à 4.00</a></li><li><a href="#bak">Le .BAK</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/edlin — « LINE TEXT EDITOR », encore livré en 6</p>
+        <h1>EDLIN</h1>
+        <p class="lede" data-lang="fr">Avant QBasic EDIT, avant DOSSHELL, il y avait l’étoile. <code>EDLIN AUTOEXEC.BAT</code>, numéro de ligne, <code>I</code> insert, <code>D</code> delete, <code>E</code> end. Le dépôt le garde en DOS 4.00 : parseur, messages, DBCS, opens étendus — et les rustines de MZ de 1983.</p>
+        <p class="lede" data-lang="en">Before QBasic EDIT, before DOSSHELL, there was the asterisk. <code>EDLIN AUTOEXEC.BAT</code>, line numbers, <code>I</code> insert, <code>D</code> delete, <code>E</code> end. The tree keeps it at DOS 4.00: parser, messages, DBCS, extended opens — and MZ’s 1983 patches.</p>
+      </header>
+
+      <section class="topic" id="lignes">
+        <h2>* _</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>1,20L · 5D · E</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>Le fichier tient en mémoire comme un tableau de lignes. On n’édite pas un écran : on adresse une ligne, on la remplace. <code>n</code> affiche, <code>nI</code> insère avant, <code>n,mD</code> efface, <code>n,mRold$new</code> remplace, <code>W</code> écrit une partie si la RAM déborde, <code>A</code> append le reste depuis le disque.</p>
+              <p>QBasic <code>EDIT.COM</code> est dans <code>cmd/qbasic/</code> — hors saga OS. EDLIN reste l’éditeur que l’on peut encore relire entièrement en assembleur.</p>
+            </div>
+            <div data-lang="en">
+              <p>The file lives in memory as an array of lines. You do not edit a screen: you address a line and replace it. <code>n</code> lists, <code>nI</code> inserts before, <code>n,mD</code> deletes, <code>n,mRold$new</code> replaces, <code>W</code> writes a slice if RAM overflows, <code>A</code> appends the rest from disk.</p>
+              <p>QBasic <code>EDIT.COM</code> lives in <code>cmd/qbasic/</code> — outside the OS saga. EDLIN is the editor you can still read entirely in assembler.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>cinq modules</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Link : <code>EDLIN+EDLCMD1+EDLCMD2+EDLMES+EDLPARSE</code>. Commandes dans <code>edlcmd1.asm</code> / <code>edlcmd2.asm</code>, textes dans <code>edlmes.asm</code>, ligne de commande (fichier à ouvrir) dans <code>edlparse.asm</code>. DOS 4 : SYSPARSE, message retriever, DBCS, « enhanced video », extended opens, correctif de scroll.</p></div>
+            <div data-lang="en"><p>Link: <code>EDLIN+EDLCMD1+EDLCMD2+EDLMES+EDLPARSE</code>. Commands in <code>edlcmd1.asm</code> / <code>edlcmd2.asm</code>, strings in <code>edlmes.asm</code>, command line (file to open) in <code>edlparse.asm</code>. DOS 4: SYSPARSE, message retriever, DBCS, “enhanced video”, extended opens, scroll fix.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>edlin.asm</span></summary>
+          <div class="level-body">
+            <pre><code>; V2.00  2/23/82  Rev. 13  N.P
+;     Changed to 2.0 system calls.
+;     Added an error message for READ-ONLY files
+; V2.00 11/7/83  Rev. 14  N.P
+;     Changed to .EXE format and added Printf
+; 11/30/83 Rev. 2  MZ
+;     Close input file before rename.
+;     Jmp to replace after line edit
+; 02/15/84 MZ make out of space a fatal error with output</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="hist">
+        <h2>Vingt-deux mois de rustines</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>printf et les %</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Rev. 3 (01-Feb-84) : « Repaired problem with using printf and having %'s as data. » Éditer un fichier qui contient un pour-cent cassait l’affichage. Leçon : ne pas réutiliser un formateur pour du texte libre.</p></div>
+            <div data-lang="en"><p>Rev. 3 (01-Feb-84): “Repaired problem with using printf and having %'s as data.” Editing a file that contained a percent sign broke the display. Lesson: do not reuse a formatter for free text.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>close before rename</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>À la sortie, EDLIN renomme l’ancien en <code>.BAK</code> et le tampon en fichier. MZ (30-Nov-83) : fermer l’entrée <em>avant</em> le rename — sous DOS 2, un handle ouvert tient le nom. « Out of space » sur la sortie devient fatal : mieux vaut garder le .BAK que produire un fichier tronqué qu’on croit bon.</p></div>
+            <div data-lang="en"><p>On exit, EDLIN renames the old file to <code>.BAK</code> and the buffer to the filename. MZ (30-Nov-83): close the input <em>before</em> rename — under DOS 2 an open handle holds the name. “Out of space” on output becomes fatal: better keep the .BAK than write a truncated file that looks fine.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>read-only</span></summary>
+          <div class="level-body">
+            <p class="note">Le message read-only (Rev. 13) interroge l’attribut avant d’ouvrir en écriture — le même bit que ATTRIB +R. Extended open (DOS 4) permet de demander l’accès sans course avec SHARE.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="bak">
+        <h2>Mémoire pleine</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>W puis A</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>EDLIN ne mappe pas le fichier. Un AUTOEXEC tient. Un listing de 200 Ko, non. On écrit les premières lignes (<code>W</code>), on charge la suite (<code>A</code>). C’est l’ancêtre maladroit de l’éditeur virtuel.</p></div>
+            <div data-lang="en"><p>EDLIN does not map the file. An AUTOEXEC fits. A 200 KB listing does not. You write the first lines (<code>W</code>), then append the rest (<code>A</code>). An awkward ancestor of a virtual editor.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>vs DEBUG</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DEBUG édite des octets et assemble. EDLIN édite du texte. Les deux sont des .EXE (EDLIN l’est devenu en 1983) et partagent le style « invite d’une lettre ».</p></div>
+            <div data-lang="en"><p>DEBUG edits bytes and assembles. EDLIN edits text. Both are .EXE (EDLIN became one in 1983) and share the “one-letter prompt” style.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>copyright 4.00</span></summary>
+          <div class="level-body">
+            <p class="note">« MS DOS EDLIN UTILITY VERSION 4.00 (C) COPYRIGHT 1988 Microsoft ». Aucune évolution 5/6 dans les sources : livré tel quel, déjà fossile, encore utile sans QBasic.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/edlin/edlin.asm<small>spec, historique MZ / N.P / M.A.U</small></span>
+          <span>cmd/edlin/edlcmd1.asm · edlcmd2.asm<small>I D L R W A E</small></span>
+          <span>cmd/edlin/edlmes.asm<small>messages, printf %</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Attributs, volume, arbre et fichiers système : <a href="attrib.html">ATTRIB · LABEL · TREE · SYS</a>.</p>
+    <p data-lang="en">Attributes, volume, tree and system files: <a href="attrib.html">ATTRIB · LABEL · TREE · SYS</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

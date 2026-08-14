@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BACKUP · RESTORE — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="xcopy.html">XCOPY</a>
+      <a href="backup.html" aria-current="page">BACKUP</a>
+      <a href="format.html">FORMAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#format">BACKUP.001</a></li><li><a href="#restore">Deux formats</a></li><li><a href="#zp">/Zp obligatoire</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/backup · cmd/restore — C, DOS 4, OS/2 cousin</p>
+        <h1>BACKUP · RESTORE</h1>
+        <p class="lede" data-lang="fr">Pas une image disque. Un gros sac <code>BACKUP.001</code> et un index <code>CONTROL.001</code>. Les fichiers sont concaténés ; les noms, dates et attributs vivent dans le contrôle. RESTORE sait encore lire l’ancien format DOS ≤ 3.2.</p>
+        <p class="lede" data-lang="en">Not a disk image. One big bag <code>BACKUP.001</code> and an index <code>CONTROL.001</code>. Files are concatenated; names, dates and attributes live in the control file. RESTORE still reads the old DOS ≤ 3.2 format.</p>
+      </header>
+
+      <section class="topic" id="format">
+        <h2>CONTROL.xxx + BACKUP.xxx</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>file-by-file, pas image</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p><code>backup.c</code> le dit noir sur blanc : « not an image type backup ». On peut formater la cible à la volée (<code>/F</code>, non documenté), journaliser (<code>/L</code>), ne prendre que l’archive (<code>/M</code>), ajouter (<code>/A</code>), filtrer date/heure. SUBST/JOIN sont refusés — comme FORMAT et DISKCOPY.</p>
+              <p>Un fichier trop gros pour une disquette est coupé : bit <code>NOTLASTPART</code> dans l’en-tête, séquence, offset dans BACKUP.xxx. La disquette suivante reprend.</p>
+            </div>
+            <div data-lang="en">
+              <p><code>backup.c</code> says it plainly: “not an image type backup”. Target can be formatted on the fly (<code>/F</code>, undocumented), logged (<code>/L</code>), archive-only (<code>/M</code>), appended (<code>/A</code>), date/time filtered. SUBST/JOIN are refused — like FORMAT and DISKCOPY.</p>
+              <p>A file too big for one floppy is split: <code>NOTLASTPART</code> bit in the header, sequence, offset in BACKUP.xxx. The next floppy continues.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>trois structures</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>Trois blocs empilés dans CONTROL.xxx (<code>backup.h</code>) :</p>
+              <ol>
+                <li><code>Disk_Header</code> — identifiant 8 octets, n° de séquence 1–255, flag dernière cible <code>0xFF</code>.</li>
+                <li><code>Dir_Block</code> — chemin 63 octets (sans lettre), nombre de fichiers, offset du bloc suivant ou <code>0xFFFFFFFF</code>.</li>
+                <li><code>File_Header</code> — nom 8.3, flags (dernier fragment / succès / attributs étendus), taille, offset dans BACKUP.xxx, attribut, date, heure.</li>
+              </ol>
+              <p>Les 63 octets ne sont pas un hasard : c’est la limite historique du chemin DOS (celle que XCOPY C02 a dû signaler).</p>
+            </div>
+            <div data-lang="en">
+              <p>Three blocks stacked in CONTROL.xxx (<code>backup.h</code>): <code>Disk_Header</code>, <code>Dir_Block</code> (63-byte path, no letter), <code>File_Header</code> (8.3, split flags, offset into BACKUP.xxx). The 63 bytes are the historic DOS path limit — the one XCOPY C02 had to report.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>backup.h</span></summary>
+          <div class="level-body">
+            <pre><code>struct Disk_Header {
+    BYTE  DH_Length;
+    BYTE  DH_Identifier[8];   /* "identifies disk as a backup" */
+    BYTE  DH_Sequence;        /* 1-255 */
+    BYTE  DH_reserved[128];
+    BYTE  DH_LastDisk;        /* 0xFF if last target */
+};
+struct File_Header {
+    BYTE  FH_Length;
+    BYTE  FH_FName[12];
+    BYTE  FH_Flags;           /* bit0 last part, bit1 ok, bit2 EA */
+    DWORD FH_FLength;
+    WORD  FH_FSequence;
+    DWORD FH_BeginOffset;     /* into BACKUP.xxx */
+    /* ... attr, time, date */
+};</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="restore">
+        <h2>RESTORE lit deux époques</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>rtold.c · rtnew.c</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Avant 3.3, BACKUP écrivait un fichier par fichier, préfixé. Depuis 3.3 (et CP/DOS 1.0 / OS/2), c’est le couple CONTROL+BACKUP. RESTORE détecte le format et branche : <code>rtold.c</code> / <code>rtold1.c</code> contre <code>rtnew.c</code> / <code>rtnew1.c</code>. <code>/D</code> (C01, 29-Jun-90) liste le contenu sans restaurer.</p></div>
+            <div data-lang="en"><p>Before 3.3, BACKUP wrote one prefixed file per file. From 3.3 (and CP/DOS 1.0 / OS/2) it is the CONTROL+BACKUP pair. RESTORE detects the format and branches: <code>rtold.c</code> / <code>rtold1.c</code> versus <code>rtnew.c</code> / <code>rtnew1.c</code>. <code>/D</code> (C01, 29-Jun-90) lists contents without restoring.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>/S /P /B /A /E /L /M /N</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Filtres de restauration : sous-arbre, prompt si attributs changés, avant/après une date, avant/après une heure, seulement les modifiés, seulement les absents. SHARE est respecté — BACKUP ouvre en deny-write.</p></div>
+            <div data-lang="en"><p>Restore filters: subtree, prompt if attributes changed, before/after a date, before/after a time, modified only, missing only. SHARE is honoured — BACKUP opens deny-write.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>version check DOS 4</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">L’en-tête de <code>backup.c</code> : « version checked to run ONLY on DOS version 4.00 ». Le binaire 6 est encore le code 4, avec <code>doscalls.h</code> OS/2 et le parseur commun. 14 fichiers C côté RESTORE : plus gros utilitaire « métier » de <code>cmd/</code> après FDISK.</p>
+            <p class="note" data-lang="en">Header of <code>backup.c</code>: “version checked to run ONLY on DOS version 4.00”. The DOS 6 binary is still the 4.00 code, with OS/2 <code>doscalls.h</code> and the shared parser. 14 C files on the RESTORE side: the largest “business” utility in <code>cmd/</code> after FDISK.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="zp">
+        <h2>Le piège /Zp</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>structures packed</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le commentaire compile est un cri : « You MUST(!) use the PACKED option (/Zp) ». Sans ça, le compilateur aligne <code>DH_Sequence</code> et RESTORE lit n’importe quoi. Le format disque n’a pas de padding.</p></div>
+            <div data-lang="en"><p>The compile comment is a shout: “You MUST(!) use the PACKED option (/Zp)”. Without it the compiler aligns <code>DH_Sequence</code> and RESTORE reads garbage. The on-disk format has no padding.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>errorlevels</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>0 ok, 1 pas de fichiers, 2 conflit SHARE, 3 Ctrl-C, 4 erreur fatale. Les .BAT de nuit s’en servent. Même convention que XCOPY.</p></div>
+            <div data-lang="en"><p>0 ok, 1 no files, 2 SHARE conflict, 3 Ctrl-C, 4 fatal. Nightly BATs rely on it. Same convention as XCOPY.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>cc /AS /Os /Zep /W3</span></summary>
+          <div class="level-body">
+            <p class="note"><code>/AS</code> small model, <code>/Os</code> size, <code>/Zep</code> packed + enable extensions. LINK <code>mapper+comsubs</code> : couche d’appels DOS/OS2 partagée avec JOIN/SUBST.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/backup/backup.c<small>syntaxe, /F undoc, version 4.00</small></span>
+          <span>cmd/backup/backup.h<small>Disk_Header, Dir_Block, File_Header</small></span>
+          <span>cmd/restore/restore.c<small>deux formats 3.2 / 3.3+</small></span>
+          <span>cmd/restore/rtold.c · rtnew.c<small>les deux lecteurs</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Les filtres de la ligne de commande : <a href="filtres.html">MORE · FIND · SORT · FC · COMP</a>.</p>
+    <p data-lang="en">The command-line filters: <a href="filtres.html">MORE · FIND · SORT · FC · COMP</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

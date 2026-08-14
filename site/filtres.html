@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MORE · FIND · SORT · FC · COMP — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="command.html">COMMAND</a>
+      <a href="filtres.html" aria-current="page"><span data-lang="fr">Filtres</span><span data-lang="en">Filters</span></a>
+      <a href="doskey.html">DOSKEY</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#more">MORE</a></li><li><a href="#find">FIND</a></li><li><a href="#sort">SORT</a></li><li><a href="#fc">FC · COMP</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/more · find · sort · fc · comp</p>
+        <h1>
+          <span data-lang="fr">Filtres et comparateurs</span>
+          <span data-lang="en">Filters and comparators</span>
+        </h1>
+        <p class="lede" data-lang="fr">Les pipes de COMMAND sont des fichiers temporaires. Ces cinq externes sont ce qu’on branche aux deux bouts : paginer, chercher, trier, différencier. SORT tient dans 64 Ko. FC a un commentaire « The algorithm that immediately follows does not work ».</p>
+        <p class="lede" data-lang="en">COMMAND’s pipes are temporary files. These five externals are what you plug at both ends: page, search, sort, diff. SORT fits in 64 KB. FC has a comment: “The algorithm that immediately follows does not work”.</p>
+      </header>
+
+      <section class="topic" id="more">
+        <h2>MORE — une page, une touche</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>DIR | MORE</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Lit stdin jusqu’à remplir l’écran, écrit <code>-- More --</code>, attend une touche. Le nombre de lignes vient de la zone BIOS (<code>CRT_Rows</code> à <code>40:84h</code>), pas d’une constante 25 — sauf Japon, figé à 24×80.</p></div>
+            <div data-lang="en"><p>Reads stdin until the screen is full, writes <code>-- More --</code>, waits for a key. Line count comes from the BIOS area (<code>CRT_Rows</code> at <code>40:84h</code>), not a hard 25 — except Japan, frozen at 24×80.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>AN003 CR-LF</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>PTM 3860 (Bill L, 17-Sep-87) : ajouter CR-LF pour rester compatible DOS 3.3. HELP reprend le même code de hauteur d’écran (« Code taken from MORE.COM » dans <code>helper.asm</code>).</p></div>
+            <div data-lang="en"><p>PTM 3860 (Bill L, 17-Sep-87): add CR-LF to stay DOS 3.3 compatible. HELP reuses the same screen-height code (“Code taken from MORE.COM” in <code>helper.asm</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>ORG 100h · ROMBIOS</span></summary>
+          <div class="level-body">
+            <pre><code>; more.asm
+get_dev_char:
+    mov  ax, ROMBIOS_DATA
+    mov  ds, ax
+    mov  al, CRT_Rows          ; 40:84h
+    ; Japon : MAXROW = 24, MAXCOL = 80 en dur</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="find">
+        <h2>FIND « chaîne »</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>/V /C /N /I</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une seule chaîne, entre guillemets doubles (deux <code>""</code> pour en embarquer un). Sans fichier : stdin. Errorlevel 0 = des matchs, 1 = aucun, 2 = erreur — le <code>IF ERRORLEVEL</code> des .BAT s’en sert.</p></div>
+            <div data-lang="en"><p>One string only, in double quotes (two <code>""</code> to embed one). No file: stdin. Errorlevel 0 = some matches, 1 = none, 2 = error — BAT <code>IF ERRORLEVEL</code> uses it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>M.A.U. 1982</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Né FIND chez IBM après s’être appelé autrement. V1.1 23-Aug-82. Les lignes plus longues que le buffer « will bomb the program ». <code>/I</code> (ignore casse) est plus tardif ; HELP réutilise sa table de majuscules DOS.</p></div>
+            <div data-lang="en"><p>Born FIND at IBM after another name. V1.1 23-Aug-82. Lines longer than the buffer “will bomb the program”. <code>/I</code> (ignore case) came later; HELP reuses its DOS uppercase table.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>find.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Scan octet à octet, pas d’automate. DBCS conscient dans les builds asiatiques. Un fichier à la fois, nom affiché avant les lignes.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sort">
+        <h2>SORT — 64 Ko et pas plus</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>/R · /+n</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Lit stdin jusqu’à EOF, trie, écrit stdout. <code>/R</code> inverse. <code>/+n</code> commence à la colonne n. Au-delà de 64 Ko : « Insufficient memory to allocate SORT buffer ».</p></div>
+            <div data-lang="en"><p>Reads stdin to EOF, sorts, writes stdout. <code>/R</code> reverses. <code>/+n</code> starts at column n. Beyond 64 KB: “Insufficient memory to allocate SORT buffer”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>Comment the Damn source</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>18-Mar-83, MZ (Mark Zbikowski) : « Fix CR-LF at end of buffer / Fix small file sorting / Comment the Damn source ». Le tri est une table de pointeurs sur les lignes dans un unique segment — d’où le plafond 64 Ko.</p></div>
+            <div data-lang="en"><p>18-Mar-83, MZ (Mark Zbikowski): “Fix CR-LF at end of buffer / Fix small file sorting / Comment the Damn source”. The sort is a pointer table over lines in a single segment — hence the 64 KB ceiling.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>sort.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Comparaison via la table de collation NLS (DOS 3.30, RW/IBM) puis attributs étendus / code page en 4.0. DIR | SORT | MORE est donc trois processus, trois temporaires (page COMMAND).</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="fc">
+        <h2>FC et COMP</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>lignes contre octets</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>COMP : dix premières différences, jokers, options <code>/d /a /l /n= /c</code>. FC : soit octet à octet, soit « resync » de lignes (le diff des humains). DISKCOMP compare des pistes ; FC/COMP comparent des fichiers.</p></div>
+            <div data-lang="en"><p>COMP: first ten differences, wildcards, <code>/d /a /l /n= /c</code>. FC: either byte-by-byte or line “resync” (the human diff). DISKCOMP compares tracks; FC/COMP compare files.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>pas de hash</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>fc.c</code> : « No hashing of lines needs to be done; hashing only speedily tells you when things are different, not the same. Most files … largely the same. Thus, hashing buys nothing. »</p></div>
+            <div data-lang="en"><p><code>fc.c</code>: “No hashing of lines needs to be done; hashing only speedily tells you when things are different, not the same. Most files … largely the same. Thus, hashing buys nothing.”</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>KGS was here</span></summary>
+          <div class="level-body">
+            <pre><code>/* fc.c — The algorithm that immediately follows does not work.
+   There is an error somewhere in the range of lines 11 on.
+   An alternative explanation follows.                    KGS */</code></pre>
+            <p class="note" data-lang="fr">L’algo de resync (deux buffers, indices xc/yc/xp/yp, « sync range ») est laissé en commentaire mort, remplacé plus bas. COMP est du C plus simple : deux malloc, comparer, s’arrêter à 10.</p>
+            <p class="note" data-lang="en">The resync algo (two buffers, xc/yc/xp/yp, “sync range”) is left as a dead comment, replaced below. COMP is simpler C: two mallocs, compare, stop at 10.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/more/more.asm<small>CRT_Rows, AN003 CR-LF</small></span>
+          <span>cmd/find/find.asm<small>errorlevel 0/1/2, M.A.U. 1982</small></span>
+          <span>cmd/sort/sort.asm<small>64k, MZ 1983</small></span>
+          <span>cmd/fc/fc.c<small>resync, commentaire KGS</small></span>
+          <span>cmd/comp/comp.c<small>10 différences, jokers</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Pour ne plus retaper la ligne : <a href="doskey.html">DOSKEY</a>.</p>
+    <p data-lang="en">To stop retyping the line: <a href="doskey.html">DOSKEY</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

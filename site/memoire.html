@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mémoire — Comprendre MS-DOS 6 / Memory — Understanding MS-DOS 6</title>
+  <meta name="description" content="Arènes MS-DOS 6 : blocs 4Dh/5Ah, first/best/last fit, coalesce, UMB, $ALLOC.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+        <a href="memoire.html" aria-current="page"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html">COMMAND</a>
+        <a href="himem.html">HIMEM</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title"><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#arena"><span data-lang="fr">Simulateur</span><span data-lang="en">Simulator</span></a></li>
+        <li><a href="#para">16 octets</a></li>
+        <li><a href="#alloc">$ALLOC</a></li>
+        <li><a href="#coalesce">Coalesce</a></li>
+        <li><a href="#owner"><span data-lang="fr">Propriétaire</span><span data-lang="en">Owner</span></a></li>
+        <li><a href="#umb">UMB</a></li>
+        <li><a href="#sources"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · dos/alloc.asm · inc/arena.inc</p>
+        <h1>
+          <span data-lang="fr">Mémoire</span>
+          <span data-lang="en">Memory</span>
+        </h1>
+        <p class="lede" data-lang="fr">
+          Les fichiers ont un handle. La RAM a une <strong>arène</strong> :
+          une chaîne de blocs de 16 octets d’en-tête, signés
+          <code>M</code> (4Dh) ou <code>Z</code> (5Ah). Cliquez une
+          stratégie — c’est <code>$ALLOC</code> (INT 21h AH=48h) sur un
+          tas miniature, comme <code>MEM</code> le dessinerait.
+        </p>
+        <p class="lede" data-lang="en">
+          Files have a handle. RAM has an <strong>arena</strong>: a chain
+          of 16-byte headers, signed <code>M</code> (4Dh) or
+          <code>Z</code> (5Ah). Click a strategy — that is
+          <code>$ALLOC</code> (INT 21h AH=48h) on a toy heap, the way
+          <code>MEM</code> would sketch it.
+        </p>
+      </header>
+
+      <section class="machine" id="arena" aria-labelledby="arena-title">
+        <div class="machine__bar">
+          <h2 id="arena-title">
+            <span data-lang="fr">First / Best / Last fit</span>
+            <span data-lang="en">First / Best / Last fit</span>
+          </h2>
+          <div class="machine__ctrl">
+            <label><span data-lang="fr">Paragraphes</span><span data-lang="en">Paragraphs</span>
+              <input type="number" min="1" max="40" value="8" data-size>
+            </label>
+            <button type="button" data-mem="first">First</button>
+            <button type="button" data-mem="best">Best</button>
+            <button type="button" data-mem="last">Last</button>
+            <button type="button" data-mem="reset"><span data-lang="fr">Recommencer</span><span data-lang="en">Reset</span></button>
+          </div>
+        </div>
+        <div class="panel" style="border-top:0">
+          <h3>arena_head → … → 5Ah</h3>
+          <div class="arena-row" data-arena></div>
+        </div>
+        <p class="machine__say" data-say></p>
+      </section>
+
+      <section class="topic" id="para">
+        <h2>
+          <span data-lang="fr">Un paragraphe, un en-tête</span>
+          <span data-lang="en">One paragraph, one header</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">DOS ne compte pas en octets</span>
+            <span data-lang="en">DOS does not count in bytes</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                L’unité est le <strong>paragraphe</strong> : 16 octets,
+                soit un cran de segment 8086. Quand un programme demande
+                « 4 Ko », il passe <code>BX = 0100h</code> paragraphes.
+                DOS rend un <em>segment</em> : l’adresse juste après
+                l’en-tête. L’en-tête lui-même est invisible au programme
+                — un cran plus bas.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The unit is the <strong>paragraph</strong>: 16 bytes, one
+                8086 segment notch. When a program asks for “4 KB”, it
+                passes <code>BX = 0100h</code> paragraphs. DOS returns a
+                <em>segment</em>: the address just after the header. The
+                header itself is invisible to the program — one notch
+                down.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>M = suite, Z = fin</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Chaque bloc commence par 16 octets. La signature
+                <code>4Dh</code> (« M ») dit « il y en a un après » ;
+                <code>5Ah</code> (« Z ») dit « dernier de la chaîne ».
+                <code>arena_owner = 0</code> signifie libre.
+                <code>arena_size</code> est la charge utile, <em>sans</em>
+                l’en-tête. D’où le <code>INC AX</code> dans
+                <code>arena_next</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Each block starts with 16 bytes. Signature
+                <code>4Dh</code> (“M”) means “there is another after this”;
+                <code>5Ah</code> (“Z”) means “last in the chain”.
+                <code>arena_owner = 0</code> means free.
+                <code>arena_size</code> is the payload, <em>without</em>
+                the header. Hence the <code>INC AX</code> in
+                <code>arena_next</code>.
+              </p>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap"><strong>arena</strong> — <code>inc/arena.inc</code></p>
+              <div class="layout-bytes">
+                <span class="hi" style="--w:1"><b>sig</b><i>0 M/Z</i></span>
+                <span class="hi" style="--w:2"><b>owner</b><i>1–2</i></span>
+                <span class="hi" style="--w:2"><b>size</b><i>3–4</i></span>
+                <span style="--w:3"><b>pad</b><i>5–7</i></span>
+                <span style="--w:8"><b>arena_name</b><i>8–15</i></span>
+              </div>
+              <p class="note" data-lang="fr">
+                Le nom 8 caractères (DOS&nbsp;4+) est ce que
+                <code>MEM /C</code> affiche. Les routines d’ALLOC
+                comptent sur <code>arena_signature</code> et
+                <code>arena_owner_system</code> valant tous deux 0 dans DI
+                — CAUTION dans le .inc.
+              </p>
+              <p class="note" data-lang="en">
+                The 8-character name (DOS&nbsp;4+) is what
+                <code>MEM /C</code> prints. ALLOC routines rely on
+                <code>arena_signature</code> and
+                <code>arena_owner_system</code> both being 0 in DI —
+                CAUTION in the .inc.
+              </p>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>check_signature · arena_next</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/alloc.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>MOV  AX, DS
+ADD  AX, DS:[arena_size]
+INC  AX                 ; + header
+; fall into check_signature</pre>
+                <p data-lang="fr">Segment du suivant. Un en-tête ou une taille pourrie → CF, <code>error_arena_trashed</code> (7).</p>
+                <p data-lang="en">Next block’s segment. A rotten header or size → CF, <code>error_arena_trashed</code> (7).</p>
+              </div>
+              <div class="anno__row">
+                <pre>CMP  BYTE PTR ES:[DI], 4Dh
+jz   ok
+CMP  BYTE PTR ES:[DI], 5Ah
+jz   ok
+STC</pre>
+                <p data-lang="fr">Deux signatures légales, rien d’autre. DI est encore 0 (offset du champ sig).</p>
+                <p data-lang="en">Two legal signatures, nothing else. DI is still 0 (offset of the sig field).</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="alloc">
+        <h2>$ALLOC · AH=48h</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Trois façons de choisir un trou</span>
+            <span data-lang="en">Three ways to pick a hole</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <strong>First</strong> : le premier trou assez grand —
+                rapide, fragmente le début. <strong>Best</strong> : le
+                plus petit trou qui convient — moins de gaspillage.
+                <strong>Last</strong> : le dernier trou, et on prend la
+                <em>fin</em> du bloc (split high) — laisse un grand
+                espace bas pour ce qui grandira.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <strong>First</strong>: the first hole that fits — fast,
+                fragments the front. <strong>Best</strong>: the smallest
+                hole that fits — less waste. <strong>Last</strong>: the
+                last hole, taking the <em>top</em> of the block (split
+                high) — leaves a large low space for things that will
+                grow.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>FirstArena / BestArena / LastArena</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un seul parcours. Chaque trou libre est d’abord
+                <em>fusionné</em> avec le suivant s’il est libre
+                (<code>Coalesce</code>). DOS retient trois pointeurs, puis
+                selon <code>AllocMethod</code> (bits 0–1) il scinde
+                First, Best, ou Last. En cas d’échec, BX rend la plus
+                grande taille vue pendant le scan.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A single walk. Each free hole is first <em>merged</em>
+                with the next one if that is free (<code>Coalesce</code>).
+                DOS keeps three pointers, then according to
+                <code>AllocMethod</code> (bits 0–1) it splits First, Best,
+                or Last. On failure, BX returns the largest size seen
+                during the scan.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>alloc_do_split</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/alloc.asm — après le scan</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>and  cx, STRAT_MASK     ; ôte HIGH_FIRST/ONLY
+cmp  cx, BEST_FIT
+JA   alloc_do_split_high
+MOV  DS, [FirstArena]
+JB   alloc_get_size
+MOV  DS, [BestArena]</pre>
+                <p data-lang="fr">0 = first, 1 = best, 2 = last. Last saute à split_high : le nouveau bloc est <em>au-dessus</em>.</p>
+                <p data-lang="en">0 = first, 1 = best, 2 = last. Last jumps to split_high: the new block sits <em>above</em>.</p>
+              </div>
+              <div class="anno__row">
+                <pre>ADD  AX, BX
+INC  AX                 ; nouvel en-tête
+MOV  ES:[arena_owner], DI   ; 0 = reste libre
+MOV  DS:[arena_owner], CurrentPDB
+INC  AX                 ; valeur rendue au programme</pre>
+                <p data-lang="fr">Le programme ne voit jamais l’en-tête. critMem protège tout le parcours.</p>
+                <p data-lang="en">The program never sees the header. critMem covers the whole walk.</p>
+              </div>
+              <div class="anno__row">
+                <pre>; commentaire d’origine :
+; I assume this is called rarely
+; and the arena hasn't too many objects</pre>
+                <p data-lang="fr">JGL assume qu’ALLOC est rare. Sur un DOS chargé de TSR, le scan devient visible.</p>
+                <p data-lang="en">JGL assumes ALLOC is rare. On a TSR-heavy DOS, the scan becomes visible.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="coalesce">
+        <h2>Coalesce · $DEALLOC · $SETBLOCK</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Rendre, recoller, retailler</span>
+            <span data-lang="en">Give back, glue, resize</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Libérer (AH=49h) ne rend pas les octets au « système » :
+                on écrit <code>owner = 0</code>. Le trou ne fusionne avec
+                son voisin que lors du <em>prochain</em> parcours
+                (alloc ou setblock). Agrandir un bloc (AH=4Ah), c’est
+                d’abord avaler le libre qui suit, puis recouper.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Freeing (AH=49h) does not return bytes to “the system”:
+                it writes <code>owner = 0</code>. The hole only merges
+                with its neighbour on the <em>next</em> walk (alloc or
+                setblock). Growing a block (AH=4Ah) first swallows the
+                free block after it, then trims.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Le BUGBUG de SETBLOCK</span>
+            <span data-lang="en">SETBLOCK’s BUGBUG</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Si vous demandez plus que ce que le voisin libre permet,
+                <code>$SETBLOCK</code> a <em>déjà</em> collé ce voisin
+                à vous avant d’échouer. Le BX « max possible » décrit
+                donc un bloc que vous possédez déjà — plus grand qu’à
+                l’entrée. Le commentaire : <em>« This is a bug, dare we
+                fix it? »</em> Personne n’a osé. DOS&nbsp;6 le livre
+                encore ainsi.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                If you ask for more than the following free neighbour
+                allows, <code>$SETBLOCK</code> has <em>already</em>
+                glued that neighbour onto you before failing. The BX
+                “max possible” therefore describes a block you already
+                own — larger than on entry. The comment: <em>“This is a
+                bug, dare we fix it?”</em> Nobody dared. DOS&nbsp;6
+                still ships it.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>Coalesce · $DEALLOC</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/alloc.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>CALL arena_next
+CMP  ES:[arena_owner], DI   ; 0 ?
+retnz
+ADD  DS:[arena_size], CX+1
+MOV  DS:[DI], ES:[DI]       ; remonte le 5Ah
+JMP  coalesce               ; encore ?</pre>
+                <p data-lang="fr">On avale tous les libres consécutifs, et on fait remonter la signature de fin.</p>
+                <p data-lang="en">Every consecutive free block is swallowed, and the end signature is moved up.</p>
+              </div>
+              <div class="anno__row">
+                <pre>; $DEALLOC
+DEC  AX                     ; ES était le bloc utile
+CALL check_signature
+MOV  ES:[arena_owner], DI   ; 0
+; pas de coalesce ici</pre>
+                <p data-lang="fr">Libérer est O(1). Recoller attend le prochain $ALLOC / $SETBLOCK.</p>
+                <p data-lang="en">Free is O(1). Gluing waits for the next $ALLOC / $SETBLOCK.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="owner">
+        <h2>
+          <span data-lang="fr">Qui possède le bloc</span>
+          <span data-lang="en">Who owns the block</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Quitter un programme rend la RAM</span>
+            <span data-lang="en">Leaving a program gives RAM back</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Chaque bloc alloué porte le numéro du PSP
+                propriétaire. À l’<code>EXIT</code>, DOS parcourt toute
+                la chaîne et remet à zéro ceux qui ont ce numéro — y
+                compris ce que le programme a oublié de
+                <code>$DEALLOC</code>. Un TSR (<code>AH=31h</code>)
+                change de catégorie : il reste propriétaire.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Every allocated block carries the owning PSP number. On
+                <code>EXIT</code>, DOS walks the whole chain and zeroes
+                those with that number — including whatever the program
+                forgot to <code>$DEALLOC</code>. A TSR
+                (<code>AH=31h</code>) changes category: it stays the
+                owner.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>arena_free_process</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Après la RAM conventionnelle, la routine recommence à
+                <code>umb_head</code> si les UMB existent et n’ont pas
+                déjà été balayées (M010). Un programme qui a alloué en
+                UMB n’y laisse donc pas de fuites en partant — sauf TSR.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                After conventional RAM, the routine restarts at
+                <code>umb_head</code> if UMBs exist and have not already
+                been walked (M010). A program that allocated in a UMB
+                therefore does not leak on the way out — unless it is a
+                TSR.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>owner ← CurrentPDB</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>dos/alloc.asm — alloc_set_owner / arena_free_process</figcaption>
+              <pre><code>        MOV     AX,[CurrentPDB]
+        MOV     DS:[arena_owner],AX
+
+; à l'exit :
+        CMP     DS:[arena_owner],BX     ; BX = PID
+        JNZ     arena_free_next
+        MOV     DS:[arena_owner],DI     ; DI = 0</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="umb">
+        <h2>UMB · AH=58h</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">La mémoire « au-dessus » de 640 Ko</span>
+            <span data-lang="en">Memory “above” 640 KB</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Entre 640 Ko et 1 Mo, après les ROM, il reste parfois
+                des trous. HIMEM / EMM386 les donnent à DOS comme
+                <em>upper memory blocks</em>. DOS peut les
+                <strong>enchaîner</strong> à l’arène basse, ou les
+                laisser à part. <code>DOS=UMB</code> et
+                <code>LOADHIGH</code> jouent avec ça.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Between 640 KB and 1 MB, after the ROMs, holes sometimes
+                remain. HIMEM / EMM386 give them to DOS as upper memory
+                blocks. DOS can <strong>link</strong> them onto the low
+                arena, or leave them aside. <code>DOS=UMB</code> and
+                <code>LOADHIGH</code> play with that.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>HIGH_FIRST · HIGH_ONLY · LINKSTATE</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>$AllocOper</code> (AH=58h) : AL=0/1 get/set
+                stratégie, AL=2/3 get/set lien UMB. Les bits 6–7 de la
+                stratégie disent « commence aux UMB » et « uniquement
+                les UMB ». Si le lien n’est pas posé
+                (<code>UmbFlag.LINKSTATE</code>), le scan ignore
+                <code>umb_head</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>$AllocOper</code> (AH=58h): AL=0/1 get/set
+                strategy, AL=2/3 get/set UMB link. Strategy bits 6–7
+                mean “start in the UMBs” and “UMBs only”. If the link
+                is not set (<code>UmbFlag.LINKSTATE</code>), the scan
+                ignores <code>umb_head</code>.
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Bit</th><th>Constante</th><th data-lang="fr">Effet</th><th data-lang="en">Effect</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>0–1 = 00</td><td><code>FIRST_FIT</code></td><td>premier trou</td><td>first hole</td></tr>
+                  <tr><td>0–1 = 01</td><td><code>BEST_FIT</code></td><td>plus petit trou</td><td>smallest hole</td></tr>
+                  <tr><td>0–1 = 10</td><td><code>LAST_FIT</code></td><td>dernier, split haut</td><td>last, split high</td></tr>
+                  <tr><td>7</td><td><code>HIGH_FIRST</code></td><td>UMB puis bas</td><td>UMB then low</td></tr>
+                  <tr><td>6</td><td><code>HIGH_ONLY</code></td><td>UMB seulement</td><td>UMB only</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>start_arena · A20OFF_COUNT</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Si HIGH_FIRST et lien actif, <code>start_arena =
+                umb_head</code>. Échec en UMB + pas HIGH_ONLY → second
+                scan depuis <code>arena_head</code>.
+                <code>$DEALLOC</code> peut poser
+                <code>A20OFF_COUNT = 1</code> après un EXEC : les
+                applis copy-protected attendent la ligne A20 éteinte au
+                prochain IRET (M016 / M068). Ce n’est plus de la
+                stratégie d’arène — c’est un mensonge matériel pour
+                rester compatible.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                If HIGH_FIRST and the link is live,
+                <code>start_arena = umb_head</code>. Failure in UMB +
+                not HIGH_ONLY → a second scan from
+                <code>arena_head</code>. <code>$DEALLOC</code> may set
+                <code>A20OFF_COUNT = 1</code> after an EXEC:
+                copy-protected apps expect the A20 line off at the next
+                IRET (M016 / M068). That is no longer arena strategy —
+                it is a hardware lie for compatibility.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2><span data-lang="fr">Fichiers sources cités</span><span data-lang="en">Source files cited</span></h2>
+        <div class="file-index">
+          <span>inc/arena.inc<small>STRUC, 4Dh/5Ah, FIRST/BEST/LAST, HIGH_*</small></span>
+          <span>dos/alloc.asm<small>$ALLOC, $DEALLOC, $SETBLOCK, $AllocOper, Coalesce</small></span>
+          <span>dos/msproc.asm<small>EXEC, EXIT, Keep_Process, arena_free_process</small></span>
+          <span>cmd/mem<small>affichage type MEM /C</small></span>
+          <span>dev/himem · emm386<small>fournissent les UMB, hors noyau</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        L’autre ticket de DOS, après le handle : un segment, un owner,
+        une signature. Suite naturelle : <a href="int21.html">INT 21h</a>
+        (AH=48h/49h/4Ah/58h).
+      </p>
+      <p data-lang="en">
+        DOS’s other ticket, after the handle: a segment, an owner, a
+        signature. Natural sequel: <a href="int21.html">INT 21h</a>
+        (AH=48h/49h/4Ah/58h).
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+  <script src="js/mem.js"></script>
+</body>
+</html>

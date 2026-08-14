@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADDRV · REDIR · MIRROR — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="config.html">CONFIG</a>
+      <a href="restes.html" aria-current="page"><span data-lang="fr">Restes</span><span data-lang="en">Leftovers</span></a>
+      <a href="format.html">FORMAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#adddrv">ADDDRV</a></li><li><a href="#redir">REDIR</a></li><li><a href="#cps">MIRROR · UNFORMAT</a></li><li><a href="#hors">Hors saga</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/adddrv · redir · cps — et ce qu’on ne raconte pas</p>
+        <h1>
+          <span data-lang="fr">Restes de cmd/</span>
+          <span data-lang="en">Leftovers from cmd/</span>
+        </h1>
+        <p class="lede" data-lang="fr">Après les chapitres, il reste trois tiroirs : un chargeur de drivers japonais, un sac de binaires réseau sans source, et MIRROR/UNFORMAT signés Central Point. Plus QBasic et Setup, volontairement hors livre.</p>
+        <p class="lede" data-lang="en">After the chapters, three drawers remain: a Japanese driver loader, a bag of network binaries with no source, and MIRROR/UNFORMAT signed Central Point. Plus QBasic and Setup, left out of the book on purpose.</p>
+      </header>
+
+      <section class="topic" id="adddrv">
+        <h2>ADDDRV / DELDRV — MSKK</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>DEVICE= après le boot</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sur les builds japonaises (préfixes <code>MSKK</code> 1987–1991), on peut ajouter un driver sans réécrire CONFIG.SYS ni rebooter : <code>ADDDRV fichier</code> parse un mini-config, appelle l’init du device, l’enchaîne sur la chaîne. DELDRV retire. MSKK20 (25-Aug-90) : DEVICEHIGH. MSKK21 : refus si le swapper Windows tourne.</p></div>
+            <div data-lang="en"><p>On Japanese builds (<code>MSKK</code> prefixes 1987–1991) you can add a driver without rewriting CONFIG.SYS or rebooting: <code>ADDDRV file</code> parses a mini-config, calls device init, links it into the chain. DELDRV removes it. MSKK20 (25-Aug-90): DEVICEHIGH. MSKK21: refuse if the Windows swapper is running.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>device_init · SFT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>do_device</code> / <code>load_file</code> / <code>device_init</code> / <code>device_dd</code> : le même contrat que SYSINIT (page CONFIG), joué trop tard. <code>search_sft</code> trouve les handles déjà ouverts sur ce device. Ctrl-Z du fichier config converti en CR/LF (MSKK03). IRQ masquées pendant l’init (MSKK02).</p></div>
+            <div data-lang="en"><p><code>do_device</code> / <code>load_file</code> / <code>device_init</code> / <code>device_dd</code>: the same contract as SYSINIT (CONFIG page), played too late. <code>search_sft</code> finds handles already open on that device. Config-file Ctrl-Z converted to CR/LF (MSKK03). IRQs masked during init (MSKK02).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>adddrv.c · deldrv.c</span></summary>
+          <div class="level-body">
+            <p class="note">Pas dans le produit US grand public. Conservé parce que l’arbre est mondial. Utile pour comprendre que DEVICE= n’est pas magique : c’est un chargeur qu’on peut rappeler.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="redir">
+        <h2>REDIR — binaires seuls</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>NET, IPX, NETBEUI</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>cmd/redir/</code> n’a pas de .c ni de .asm : <code>redir.1xe</code> / <code>redir.2xe</code>, <code>netwksta.*</code>, <code>net.exe</code>, <code>net5.com</code>, <code>netbeui.dos</code>, <code>ipx.obj</code>, <code>tbmi2.com</code>, <code>sstor.sys</code>, <code>dmdrvr.bin</code>, <code>xbios.ovl</code>. Le makefile ne fait que copier et compresser. C’est le client réseau (redirecteur) livré avec DOS, source fermée ici.</p></div>
+            <div data-lang="en"><p><code>cmd/redir/</code> has no .c or .asm: <code>redir.1xe</code> / <code>redir.2xe</code>, <code>netwksta.*</code>, <code>net.exe</code>, <code>net5.com</code>, <code>netbeui.dos</code>, <code>ipx.obj</code>, <code>tbmi2.com</code>, <code>sstor.sys</code>, <code>dmdrvr.bin</code>, <code>xbios.ovl</code>. The makefile only copies and compresses. This is the network client (redirector) shipped with DOS, closed source here.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>.1xe / .2xe</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Deux images : DOS 1-ish / DOS 2+ workstation, ou deux tailles. Le noyau parle au redirecteur via INT 2Fh (même famille que SHARE). Sans source, on s’arrête au contrat : une lettre réseau est un CDS dont le flag dit « pas un disque local ».</p></div>
+            <div data-lang="en"><p>Two images: DOS 1-ish / DOS 2+ workstation, or two sizes. The kernel talks to the redirector via INT 2Fh (same family as SHARE). With no source we stop at the contract: a network letter is a CDS whose flag says “not a local disk”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>makefile only</span></summary>
+          <div class="level-body">
+            <p class="note">Interlnk (page dédiée) est le cousin « câble nul » <em>avec</em> source. REDIR est le cousin LAN <em>sans</em> source. On ne reverse pas les .EXE dans ce guide.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="cps">
+        <h2>MIRROR et UNFORMAT — Central Point</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>cmd/cps/</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Copyright 1990–1991 Central Point Software, pas Microsoft. MIRROR écrit une image de la FAT et de la racine (<code>MIRROR.FIL</code> / <code>MIRORSAV.FIL</code>) pour qu’UNFORMAT (module <code>rebuild/</code>, encore appelé « Unformat » dans <code>uf_main.asm</code>) puisse recoller un FORMAT accidentel. FORMAT « safe » de DOS 5/6 s’appuie sur la même idée (page FORMAT).</p></div>
+            <div data-lang="en"><p>Copyright 1990–1991 Central Point Software, not Microsoft. MIRROR writes an image of the FAT and root (<code>MIRROR.FIL</code> / <code>MIRORSAV.FIL</code>) so UNFORMAT (module <code>rebuild/</code>, still called “Unformat” in <code>uf_main.asm</code>) can restitch an accidental FORMAT. DOS 5/6 “safe” FORMAT rests on the same idea (FORMAT page).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>FAT &gt; 64 Ko</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>mir_main.asm</code> : « If FAT&gt;64k, program screws up. Too hard to fix Jim’s kluged code, so only added a check for sector_count&gt;128 and fake an error. » (GWD, 1-May-89). <code>/N</code> coupe l’écriture de MIRROR.FIL. Save de la table de partitions sur disquette (<code>mir_prtn.asm</code>). UNFORMAT refusait de tourner sous DOS 5.x (1-Jan-89) — rustines M000–M002 ensuite.</p></div>
+            <div data-lang="en"><p><code>mir_main.asm</code>: “If FAT&gt;64k, program screws up. Too hard to fix Jim’s kluged code, so only added a check for sector_count&gt;128 and fake an error.” (GWD, 1-May-89). <code>/N</code> skips writing MIRROR.FIL. Partition table saved to floppy (<code>mir_prtn.asm</code>). UNFORMAT refused to run under DOS 5.x (1-Jan-89) — M000–M002 later.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>utils/pklite.exe</span></summary>
+          <div class="level-body">
+            <p class="note">Le dossier <code>cps/utils/</code> embarque PKLITE, PMAKE, MAKE — la chaîne Central Point, pas celle de Microsoft. Delete Tracking est un module à part, explicitement hors de <code>mir_main.asm</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="hors">
+        <h2>Ce qu’on ne raconte pas</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>QBasic · Setup</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>cmd/qbasic/</code> : un autre produit (interpréteur, EDIT, aide). <code>install/</code> à la racine du dépôt : le Setup. Ni l’un ni l’autre n’est un service du noyau ni un utilitaire de la ligne. CHOICE.COM n’est tout simplement pas là.</p></div>
+            <div data-lang="en"><p><code>cmd/qbasic/</code>: another product (interpreter, EDIT, help). <code>install/</code> at the tree root: Setup. Neither is a kernel service nor a command-line utility. CHOICE.COM is simply not here.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>inventaire cmd/</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>Tout le reste de <code>cmd/</code> a une page : COMMAND, les outils disque, les TSR (PRINT, SHARE, FASTOPEN, APPEND, ASSIGN, KEYB, NLSFUNC, SETVER, MODE, DOSKEY, GRAPHICS, GRAFTABL), les filtres, XCOPY/REPLACE/EXPAND, BACKUP/RESTORE, ATTRIB/LABEL/TREE/SYS, HELP, DEBUG, MEM, les rustines, Interlnk, SUBST/JOIN.</p>
+            </div>
+            <div data-lang="en">
+              <p>Everything else in <code>cmd/</code> has a page: COMMAND, the disk tools, the TSRs (PRINT, SHARE, FASTOPEN, APPEND, ASSIGN, KEYB, NLSFUNC, SETVER, MODE, DOSKEY, GRAPHICS, GRAFTABL), the filters, XCOPY/REPLACE/EXPAND, BACKUP/RESTORE, ATTRIB/LABEL/TREE/SYS, HELP, DEBUG, MEM, the patches, Interlnk, SUBST/JOIN.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>fin de la saga cmd/</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Le noyau (<code>dos/</code>, <code>bios/</code>, <code>boot/</code>, <code>dev/</code>) et DOSSHELL (<code>dosshell/</code>) sont déjà couverts. <code>c6ers/</code> est la bibliothèque C des utilitaires, pas un chapitre. On a épuisé <code>cmd/</code>.</p>
+            <p class="note" data-lang="en">The kernel (<code>dos/</code>, <code>bios/</code>, <code>boot/</code>, <code>dev/</code>) and DOSSHELL (<code>dosshell/</code>) are already covered. <code>c6ers/</code> is the utilities’ C library, not a chapter. <code>cmd/</code> is exhausted.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/adddrv/adddrv.c<small>MSKK, DEVICEHIGH, swapper</small></span>
+          <span>cmd/redir/<small>binaires NET/IPX/NETBEUI, makefile only</small></span>
+          <span>cmd/cps/mirror/mir_main.asm<small>FAT&gt;64k, /N, Central Point</small></span>
+          <span>cmd/cps/rebuild/uf_main.asm<small>Unformat, refus DOS 5 d’origine</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Retour à l’<a href="index.html">accueil</a> — sept sagas, <code>cmd/</code> à sec.</p>
+    <p data-lang="en">Back to the <a href="index.html">home page</a> — seven sagas, <code>cmd/</code> dry.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

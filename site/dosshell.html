@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DOSSHELL — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="command.html">COMMAND</a>
+      <a href="dosshell.html" aria-current="page">DOSSHELL</a>
+      <a href="exec.html">EXEC</a>
+      <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#mgr">Gestionnaire</a></li><li><a href="#task">Task swapper</a></li><li><a href="#2f">INT 2Fh</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dosshell/shell · swapper/woa*.asm</p>
+        <h1>DOSSHELL</h1>
+        <p class="lede" data-lang="fr">Le gestionnaire de fichiers graphique de DOS 5/6. Il ne remplace pas COMMAND : il lui <em>injecte</em> des lignes (INT 2Fh déjà vu dans <a href="command.html#batch">tcode.asm</a>) et permute des programmes en les écrivant sur disque (WOA — Windows on MS-DOS? plutôt « swapper » maison).</p>
+        <p class="lede" data-lang="en">The DOS 5/6 graphical file manager. It does not replace COMMAND: it <em>injects</em> lines (INT 2Fh already seen in <a href="command.html#batch">tcode.asm</a>) and swaps programs by writing them to disk (WOA files — an in-house swapper).</p>
+      </header>
+      <section class="topic" id="mgr">
+        <h2>filemgr.c · dir.c · copy.c</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">DIR et COPY avec une souris</span>
+            <span data-lang="en">DIR and COPY with a mouse</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Deux panneaux, arbre, associations. Derrière : les mêmes FindFirst / COPY / ATTR que COMMAND. <code>dosintf.c</code> est le pont vers INT 21h.</p></div>
+            <div data-lang="en"><p>Two panes, tree, associations. Behind them: the same FindFirst / COPY / ATTR as COMMAND. <code>dosintf.c</code> is the bridge to INT 21h.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>COW</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>L’UI vient d’une lib « Character Oriented Windows » (<code>lib/cow3.lib</code>, headers <code>cwindows.h</code>). Les grabbers <code>grbs/*.grb</code> sauvent l’écran graphique au swap.</p></div>
+            <div data-lang="en"><p>The UI comes from a “Character Oriented Windows” lib (<code>lib/cow3.lib</code>, <code>cwindows.h</code>). Grabbers <code>grbs/*.grb</code> save the graphics screen on swap.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>iniparse</span></summary>
+          <div class="level-body">
+            <p class="note">DOSSHELL.INI parsé dans <code>iniparse/</code>. Couleurs, options, groupes de programmes (<code>groups.c</code>) — un proto-menu Démarrer.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="task">
+        <h2>Le swapper</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>taskman.c · Alt+Tab</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Ce n’est pas du vrai multitâche. On gèle FOO.COM, on écrit son image (et l’écran) sur disque, on lance BAR.COM. Revenir = relire. XMS accélère (<code>woaxms.asm</code>).</p></div>
+            <div data-lang="en"><p>This is not real multitasking. FOO.COM is frozen, its image (and the screen) written to disk, BAR.COM launched. Coming back = reread. XMS speeds it up (<code>woaxms.asm</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>woa*.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une douzaine de modules : arènes (<code>woaarena.inc</code>), souris, clavier, erreurs, init. Le swapper est un petit DOS à lui tout seul, plus gros que PRINT.</p></div>
+            <div data-lang="en"><p>A dozen modules: arenas (<code>woaarena.inc</code>), mouse, keyboard, errors, init. The swapper is a little DOS of its own, larger than PRINT.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>loader/shell.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Un chargeur minuscule reste résident ; le gros SHELL.EXE se fait overlay / swap. Même idée que COMMAND résident/transient, en beaucoup plus lourd.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="2f">
+        <h2>Parler à COMMAND</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>mult_shell_get</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Avant READBAT, COMMAND demande : « SHELL, tu as une ligne ? » DOSSHELL répond oui et pousse <code>DIR /W</code> dans COMBUF. L’utilisateur croit avoir cliqué ; c’est un batch fantôme.</p></div>
+            <div data-lang="en"><p>Before READBAT, COMMAND asks: “SHELL, do you have a line?” DOSSHELL says yes and pushes <code>DIR /W</code> into COMBUF. The user thinks they clicked; it is a ghost batch line.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>launch.c</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Lancer un .EXE : soit INT 2Fh + COMMAND, soit $EXEC direct. Le swapper doit alors geler le shell lui-même (assez de RAM ?).</p></div>
+            <div data-lang="en"><p>Launching an .EXE: either INT 2Fh + COMMAND, or $EXEC directly. The swapper must then freeze the shell itself (enough RAM?).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>winidle.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Sous Windows, le shell se tient tranquille (idle). Même politesse que SMARTDRV <code>indosbox.asm</code> et MEM <code>wintest.asm</code>.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dosshell/shell/*.c<small>filemgr, taskman, launch</small></span>
+          <span>dosshell/swapper/woa*.asm<small>swap XMS / disque</small></span>
+          <span>cmd/command/tcode.asm<small>mult_shell_get</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Trente-deux articles. Le dépôt a encore QBasic et Setup, mais ce n’est plus le même livre.</p>
+    <p data-lang="en">Thirty-two articles. The tree still has QBasic and Setup, but that is a different book.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

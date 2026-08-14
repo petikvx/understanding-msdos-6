@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DoubleSpace — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="dblspace.html" aria-current="page">DBLSPACE</a>
+      <a href="smartdrv.html">SMARTDRV</a>
+      <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#cvf">CVF</a></li><li><a href="#patch">MAGICPATCH</a></li><li><a href="#map">Drive map</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">inc/magicdrv.inc · dos/rom.asm</p>
+        <h1>DoubleSpace</h1>
+        <p class="lede" data-lang="fr">MagicDrv dans le code : un gros fichier (<em>Compressed Volume File</em>) qui se fait passer pour un disque. DOS continue de voir des clusters FAT ; le pilote comprime derrière. <code>ALLOCATE</code> a un crochet pour dire non si le FAT dit oui mais qu’il n’y a plus d’air comprimé.</p>
+        <p class="lede" data-lang="en">MagicDrv in the source: a large file (Compressed Volume File) pretending to be a disk. DOS still sees FAT clusters; the driver compresses behind. <code>ALLOCATE</code> has a hook to say no if the FAT says yes but compressed free space is gone.</p>
+      </header>
+      <section class="topic" id="cvf">
+        <h2>Un fichier qui est un volume</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>DBLSPACE.000</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>H: héberge le fichier compressé ; C: est l’illusion montée par le driver. CHKDSK / FORMAT voient C: comme un FAT normal — jusqu’à ce que l’espace « réel » soit épuisé plus tôt.</p></div>
+            <div data-lang="en"><p>H: hosts the compressed file; C: is the illusion the driver mounts. CHKDSK / FORMAT see C: as a normal FAT — until “real” space runs out sooner.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>MD_BPB · PLAIN_BPB</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>magicdrv.inc</code> : en tête du CVF, un BPB (même champs que <a href="fat.html#anatomie">A_BPB</a>) puis des extensions MagicDrv. Les premiers noms de champs ont changé — le commentaire le dit.</p></div>
+            <div data-lang="en"><p><code>magicdrv.inc</code>: at the start of the CVF, a BPB (same fields as <a href="fat.html#anatomie">A_BPB</a>) then MagicDrv extras. Early field names changed — the comment says so.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>INT 2Fh 4A11h</span></summary>
+          <div class="level-body">
+            <figure class="source"><figcaption>inc/magicdrv.inc</figcaption>
+<pre><code>multMagicdrv    equ     4a11h
+MD_VERSION      equ     0
+MD_DRIVE_MAP    equ     1       ; Get drive mapping info</code></pre></figure>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="patch">
+        <h2>MAGICPATCH</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Le FAT peut mentir sur l’espace</span>
+            <span data-lang="en">The FAT can lie about space</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un fichier de 1 octet prend un cluster <em>logique</em> entier, mais quelques centaines d’octets compressés. L’inverse aussi : un fichier incompressible « mange » plus que la FAT ne croit. D’où le patch dans <a href="fat.html#cycle">ALLOCATE</a>.</p></div>
+            <div data-lang="en"><p>A 1-byte file takes a whole <em>logical</em> cluster, but only a few hundred compressed bytes. The reverse too: an incompressible file “eats” more than the FAT thinks. Hence the patch in <a href="fat.html#cycle">ALLOCATE</a>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>callmagic</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>On ne peut pas faire un far call avec fixups (ROMDOS / Hidos). <code>callmagic</code> simule un <code>RETF</code> vers <code>dosdata:magicpatch</code>. Sans patch, CLC et on continue.</p></div>
+            <div data-lang="en"><p>A far call with fixups is forbidden (ROMDOS / Hidos). <code>callmagic</code> simulates a <code>RETF</code> to <code>dosdata:magicpatch</code>. With no patch, CLC and carry on.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>7/5/92 scottq</span></summary>
+          <div class="level-body">
+            <p class="note">Commentaire dans <code>rom.asm</code> : « fail allocations if the FAT would allow allocation, but the free space for compressed data would not. » Date : 5 juillet 1992.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="map">
+        <h2>Correspondance des lecteurs</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>MD_DRIVE_MAP</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>INT 2Fh AX=4A11h, fonction 1 : qui est le hôte, qui est le compressé. SMARTDRV (<code>doubleb/</code>) et CHKDSK s’en servent pour ne pas cacher deux fois le même secteur.</p></div>
+            <div data-lang="en"><p>INT 2Fh AX=4A11h, function 1: which is host, which is compressed. SMARTDRV (<code>doubleb/</code>) and CHKDSK use it so as not to cache the same sector twice.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Stacker</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>SMARTDRV a aussi <code>stacker.asm</code> : le concurrent. DOS 6.22 passera à DriveSpace après le procès Stac — le crochet MAGICPATCH reste le même genre d’idée.</p></div>
+            <div data-lang="en"><p>SMARTDRV also has <code>stacker.asm</code>: the competitor. DOS 6.22 will move to DriveSpace after the Stac lawsuit — the MAGICPATCH hook stays the same kind of idea.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>CVF ≠ partition</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">FDISK ne voit qu’une partition hôte. Le « C: de 200 Mo » n’existe pas dans la table MBR. C’est pour ça qu’un UNFORMAT / FDISK malheureux sur H: détruit tout le château de cartes.</p>
+            <p class="note" data-lang="en">FDISK only sees a host partition. The “200 MB C:” is not in the MBR table. That is why a clumsy UNFORMAT / FDISK on H: knocks the whole house of cards down.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>inc/magicdrv.inc<small>4A11h, MD_BPB, CVF</small></span>
+          <span>dos/rom.asm<small>MAGICPATCH, callmagic</small></span>
+          <span>dev/smartdrv/doubleb/<small>cache + compression</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Le noyau FAT n’a presque pas changé : DoubleSpace s’accroche, il ne remplace pas.</p>
+    <p data-lang="en">The FAT kernel barely changed: DoubleSpace hooks in, it does not replace it.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MEM — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+      <a href="mem.html" aria-current="page">MEM</a>
+      <a href="himem.html">HIMEM</a>
+      <a href="emm386.html">EMM386</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#map">La carte</a></li><li><a href="#sw">/C /D /F /M</a></li><li><a href="#xms">XMS · EMS</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/mem/mem.c · membase.c</p>
+        <h1>MEM.COM</h1>
+        <p class="lede" data-lang="fr">La vue utilisateur de la page <a href="memoire.html">Mémoire</a>. MEM marche la chaîne d’arènes, lit <code>arena_name</code>, interroge HIMEM et EMM386, et imprime ce que le simulateur First/Best/Last dessine à la main.</p>
+        <p class="lede" data-lang="en">The user view of the <a href="memoire.html">Memory</a> page. MEM walks the arena chain, reads <code>arena_name</code>, asks HIMEM and EMM386, and prints what the First/Best/Last simulator draws by hand.</p>
+      </header>
+      <section class="topic" id="map">
+        <h2>Marcher les 4Dh / 5Ah</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>MEM</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sans switch : totaux conventionnel / supérieur / étendu. Les noms (MSDOS, COMMAND, HIMEM…) viennent des 8 caractères de l’en-tête d’arène, pas d’une magie.</p></div>
+            <div data-lang="en"><p>No switch: conventional / upper / extended totals. The names (MSDOS, COMMAND, HIMEM…) come from the 8-character arena header, not from magic.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>membase.c</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Parcourt depuis <code>arena_head</code> (INT 21h AH=52h <code>$GET_IN_VARS</code> — CAVEAT PROGRAMMER). Owner 0 = free, owner 8 souvent DOS, sinon segment de PSP.</p></div>
+            <div data-lang="en"><p>Walks from <code>arena_head</code> (INT 21h AH=52h <code>$GET_IN_VARS</code> — CAVEAT PROGRAMMER). Owner 0 = free, owner 8 often DOS, otherwise a PSP segment.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>chkvdisk.asm</span></summary>
+          <div class="level-body">
+            <p class="note">VDISK (vieux RAM disk) plante un header en extended memory. MEM le détecte pour ne pas compter deux fois. Même souci que HIMEM / 16 Mo EISA.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sw">
+        <h2>/CLASSIFY /DEBUG /FREE /MODULE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>/C</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>/C : par module (ce que chaque programme occupe). /D : tout, y compris les drivers. /F : trous. /M nom : un seul module. C’est le commentaire en tête de <code>mem.c</code>.</p></div>
+            <div data-lang="en"><p>/C: per module (what each program occupies). /D: everything, drivers included. /F: holes. /M name: one module. That is the comment at the top of <code>mem.c</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>memex.c</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Regroupe les blocs du même owner (un programme peut avoir plusieurs arènes : env + code + overlays). Affiche aussi les UMB si <code>LINKSTATE</code>.</p></div>
+            <div data-lang="en"><p>Groups blocks with the same owner (a program may have several arenas: env + code + overlays). Also shows UMBs if <code>LINKSTATE</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>memctrlc.c</span></summary>
+          <div class="level-body">
+            <p class="note">Ctrl-C pendant un long /DEBUG : handler C maison. MEM est l’un des rares utilitaires noyau écrits en C (comme FDISK, SETVER).</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="xms">
+        <h2>Interroger HIMEM et EMM386</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>xms.asm · emm386.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les totaux « Extended » / « Expanded » ne viennent pas des arènes : INT 2Fh XMS et INT 67h EMS. Sans les drivers, ces lignes sont à zéro ou absentes.</p></div>
+            <div data-lang="en"><p>The “Extended” / “Expanded” totals are not from arenas: INT 2Fh XMS and INT 67h EMS. Without the drivers those lines are zero or missing.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>HMA</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>MEM indique si DOS est en HMA (<code>DOS=HIGH</code>). Ça se voit aussi : le premier bloc conventionnel est plus petit.</p></div>
+            <div data-lang="en"><p>MEM says whether DOS is in the HMA (<code>DOS=HIGH</code>). You can see it too: the first conventional block is smaller.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>wintest.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Détection Windows : les chiffres changent dans une boîte DOS. MEM doit mentir un peu, ou du moins ne pas paniquer.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/mem/mem.c<small>syntaxe /C /D /F /M</small></span>
+          <span>cmd/mem/membase.c · memex.c<small>arènes</small></span>
+          <span>cmd/mem/xms.asm · emm386.asm<small>XMS, EMS</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Un autre PC au bout d’un câble : <a href="interlnk.html">Interlnk</a>.</p>
+    <p data-lang="en">Another PC at the end of a cable: <a href="interlnk.html">Interlnk</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

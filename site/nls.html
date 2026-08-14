@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clavier et pays — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="config.html">CONFIG</a>
+      <a href="nls.html" aria-current="page">NLS</a>
+      <a href="command.html">COMMAND</a>
+      <a href="int21.html">INT 21h</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#keyb">KEYB</a></li><li><a href="#country">COUNTRY</a></li><li><a href="#cp">Pages de codes</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/keyboard · cmd/keyb · cmd/nlsfunc · dev/country</p>
+        <h1>
+          <span data-lang="fr">Clavier et pays</span>
+          <span data-lang="en">Keyboard and country</span>
+        </h1>
+        <p class="lede" data-lang="fr">DOS est né en anglais. KEYB, COUNTRY.SYS et NLSFUNC y greffent AZERTY, dates jj/mm/aaaa, et pages de codes. COMMAND appelle déjà INT 21h <code>AH=38h</code> à chaque boucle pour rafraîchir <code>INTERNATVARS</code>.</p>
+        <p class="lede" data-lang="en">DOS was born in English. KEYB, COUNTRY.SYS and NLSFUNC graft on AZERTY, dd/mm/yyyy dates, and code pages. COMMAND already calls INT 21h <code>AH=38h</code> every loop to refresh <code>INTERNATVARS</code>.</p>
+      </header>
+      <section class="topic" id="keyb">
+        <h2>KEYB</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>KEYB FR</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le BIOS livre un clavier US. KEYB s’accroche à INT 9 / INT 16 et traduit les scan codes. Alt+chiffres du pavé restent le moyen universel d’entrer un caractère.</p></div>
+            <div data-lang="en"><p>The BIOS ships a US keyboard. KEYB hooks INT 9 / INT 16 and translates scan codes. Alt+keypad digits stay the universal way to enter a character.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>dev/keyboard · cmd/keyb</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Des tables par pays (dizaines de .asm). KEYB.COM charge la bonne. CHCP (interne COMMAND, <code>tcmd2b.asm</code>) change la page de codes active — il faut NLSFUNC et DISPLAY.SYS / CON.</p></div>
+            <div data-lang="en"><p>Per-country tables (dozens of .asm files). KEYB.COM loads the right one. CHCP (COMMAND internal, <code>tcmd2b.asm</code>) switches the active code page — you need NLSFUNC and DISPLAY.SYS / CON.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>DBCS</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr"><code>ITESTKANJ</code> dans le résident de COMMAND : un caractère peut occuper deux octets (japonais). PATH et TransPath ont des branches DBCS. <code>rucode.asm</code> le mentionne.</p>
+            <p class="note" data-lang="en"><code>ITESTKANJ</code> in COMMAND’s resident: a character may occupy two bytes (Japanese). PATH and TransPath have DBCS branches. <code>rucode.asm</code> mentions it.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="country">
+        <h2>COUNTRY.SYS</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>AH=38h · AH=65h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Séparateur décimal, format de date, symbole monétaire, table de collation pour SORT. CONFIG.SYS : <code>COUNTRY=033,850,C:\DOS\COUNTRY.SYS</code>.</p></div>
+            <div data-lang="en"><p>Decimal separator, date format, currency symbol, collation table for SORT. CONFIG.SYS: <code>COUNTRY=033,850,C:\DOS\COUNTRY.SYS</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>$INTERNATIONAL · $GetExtCntry</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Dans la table DISPATCH : 38h et 65h/66h (code page). DATE/TIME internes de COMMAND (tpipe.asm) s’en servent pour afficher jj-mm-aa vs mm-dd-yy.</p></div>
+            <div data-lang="en"><p>In the DISPATCH table: 38h and 65h/66h (code page). COMMAND’s DATE/TIME internals (tpipe.asm) use them to show dd-mm-yy vs mm-dd-yy.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>dev/country</span></summary>
+          <div class="level-body">
+            <p class="note">COUNTRY.SYS est un fichier de données + un petit driver. NLSFUNC.EXE le rend résident pour CHCP à chaud.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="cp">
+        <h2>437 · 850 · 863</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Le même octet, un autre glyphe</span>
+            <span data-lang="en">The same byte, another glyph</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un fichier texte n’a pas de « encoding » déclaré. MODE CON CP PREP + CHCP change l’écran et le clavier. GRAFTABL charge les glyphes graphiques.</p></div>
+            <div data-lang="en"><p>A text file has no declared encoding. MODE CON CP PREP + CHCP changes the screen and keyboard. GRAFTABL loads the graphic glyphs.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>DIR_CODEPG</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DOS 4 a prévu une page de codes dans l’entrée répertoire (<a href="fat.html#repertoire">dirent.inc</a>). Peu d’outils s’en servent. Le mismatch code page peut faire échouer un OPEN (hooks dans <code>$Open</code>).</p></div>
+            <div data-lang="en"><p>DOS 4 reserved a code page in the directory entry (<a href="fat.html#repertoire">dirent.inc</a>). Few tools use it. A code-page mismatch can fail an OPEN (hooks in <code>$Open</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>dev/display</span></summary>
+          <div class="level-body">
+            <p class="note">DISPLAY.SYS / EGA.CPI : énormes tables de glyphes dans <code>dev/display</code>. PRINTER.SYS fait de même pour les imprimantes à code page.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/keyboard · cmd/keyb<small>tables, INT 9</small></span>
+          <span>dev/country · cmd/nlsfunc<small>COUNTRY.SYS, CHCP</small></span>
+          <span>cmd/command/tcmd2b.asm<small>CHCP interne</small></span>
+          <span>inc/dirent.inc<small>DIR_CODEPG</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Le disque, lui, parle encore INT 13h — en dessous de SMARTDRV et de FAT.</p>
+    <p data-lang="en">The disk still speaks INT 13h — below SMARTDRV and FAT.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

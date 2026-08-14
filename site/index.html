@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comprendre MS-DOS 6 / Understanding MS-DOS 6</title>
+  <meta name="description" content="Guide bilingue du code source de MS-DOS 6 : système de fichiers FAT, structures internes et routines du noyau.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html" aria-current="page">
+          <span data-lang="fr">Accueil</span>
+          <span data-lang="en">Home</span>
+        </a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html">
+          <span data-lang="fr">Fichiers</span>
+          <span data-lang="en">Files</span>
+        </a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html">COMMAND</a>
+        <a href="boot.html">Boot</a>
+        <a href="config.html">CONFIG</a>
+        <a href="himem.html">HIMEM</a>
+        <a href="chkdsk.html">CHKDSK</a>
+        <a href="format.html">FORMAT</a>
+        <a href="fdisk.html">FDISK</a>
+        <a href="emm386.html">EMM386</a>
+        <a href="smartdrv.html">SMARTDRV</a>
+        <a href="int24.html">INT 24</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="layout layout--home">
+    <article class="content">
+      <header class="hero">
+        <p class="kicker">MS-DOS 6 · 1991–1993</p>
+        <h1>
+          <span data-lang="fr">Le système d’exploitation, lu depuis son code</span>
+          <span data-lang="en">The operating system, read from its source</span>
+        </h1>
+        <p class="lede" data-lang="fr">
+          Ce site explique les fonctionnalités de MS-DOS&nbsp;6 à partir du code source
+          Microsoft. Chaque page se lit à trois profondeurs — découverte, intermédiaire,
+          technique — et existe en français et en anglais.
+        </p>
+        <p class="lede" data-lang="en">
+          This site explains MS-DOS&nbsp;6 features from the Microsoft source code.
+          Each page can be read at three depths — discovery, intermediate, technical —
+          and is available in French and English.
+        </p>
+      </header>
+
+      <section>
+        <h2 class="saga" data-lang="fr">1 · Du courant à l’invite</h2>
+        <h2 class="saga" data-lang="en">1 · From power-on to the prompt</h2>
+        <div class="cards">
+          <a class="card" href="boot.html">
+            <h2><span data-lang="fr">Amorçage</span><span data-lang="en">Boot</span></h2>
+            <p data-lang="fr">ROM → <code>7C00h</code> → IO.SYS (3 secteurs) → MSLOAD. Le contrat du secteur 0.</p>
+            <p data-lang="en">ROM → <code>7C00h</code> → IO.SYS (3 sectors) → MSLOAD. Sector 0’s contract.</p>
+          </a>
+          <a class="card" href="config.html">
+            <h2>CONFIG.SYS</h2>
+            <p data-lang="fr">Plusieurs passes, <code>DEVICE=</code> en overlay, <code>DOS=HIGH,UMB</code>, <code>FILES=</code>.</p>
+            <p data-lang="en">Several passes, <code>DEVICE=</code> as overlay, <code>DOS=HIGH,UMB</code>, <code>FILES=</code>.</p>
+          </a>
+          <a class="card" href="himem.html">
+            <h2>HIMEM.SYS</h2>
+            <p data-lang="fr">XMS, ligne A20, HMA. Pourquoi les applis copy-protected veulent A20 éteint.</p>
+            <p data-lang="en">XMS, A20 line, HMA. Why copy-protected apps want A20 off.</p>
+          </a>
+          <a class="card" href="command.html">
+            <h2>COMMAND.COM</h2>
+            <p data-lang="fr">Résident / transient, pipes-fichiers, checksum, COMTAB.</p>
+            <p data-lang="en">Resident / transient, file-pipes, checksum, COMTAB.</p>
+          </a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">2 · Noyau au quotidien</h2>
+        <h2 class="saga" data-lang="en">2 · Everyday kernel</h2>
+        <div class="cards">
+          <a class="card" href="fat.html"><h2>FAT</h2>
+            <p data-lang="fr">Clusters, UNPACK/PACK, attributs, ALLOCATE.</p>
+            <p data-lang="en">Clusters, UNPACK/PACK, attributes, ALLOCATE.</p></a>
+          <a class="card" href="fichiers.html"><h2 data-lang="fr">Fichiers ouverts</h2><h2 data-lang="en">Open files</h2>
+            <p>Handle, SFT, FCB, TYPE AUTOEXEC.BAT.</p></a>
+          <a class="card" href="memoire.html"><h2 data-lang="fr">Mémoire</h2><h2 data-lang="en">Memory</h2>
+            <p>Arènes 4Dh/5Ah, first/best/last, UMB.</p></a>
+          <a class="card" href="int21.html"><h2>INT 21h</h2>
+            <p data-lang="fr">Dispatcher, trois piles, table DISPATCH.</p>
+            <p data-lang="en">Dispatcher, three stacks, DISPATCH table.</p></a>
+          <a class="card" href="exec.html"><h2>EXEC · PSP</h2>
+            <p>FOO.COM, MZ, EXIT, TSR.</p></a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">3 · Outils disque</h2>
+        <h2 class="saga" data-lang="en">3 · Disk tools</h2>
+        <div class="cards">
+          <a class="card" href="fdisk.html"><h2>FDISK</h2>
+            <p data-lang="fr">MBR, types 1/4/6, étendue, bit actif.</p>
+            <p data-lang="en">MBR, types 1/4/6, extended, active bit.</p></a>
+          <a class="card" href="format.html"><h2>FORMAT</h2>
+            <p data-lang="fr">Safe format, BPB, /S, UNFORMAT.</p>
+            <p data-lang="en">Safe format, BPB, /S, UNFORMAT.</p></a>
+          <a class="card" href="chkdsk.html"><h2>CHKDSK</h2>
+            <p data-lang="fr">FATMAP, orphelins, cross-links, FILE0000.CHK.</p>
+            <p data-lang="en">FATMAP, orphans, cross-links, FILE0000.CHK.</p></a>
+          <a class="card" href="diskcopy.html"><h2>DISKCOPY</h2>
+            <p data-lang="fr">Piste à piste, pas la FAT. DISKCOMP frère.</p>
+            <p data-lang="en">Track by track, not the FAT. Sibling DISKCOMP.</p></a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">4 · Au-dessus et en dessous du noyau</h2>
+        <h2 class="saga" data-lang="en">4 · Above and below the kernel</h2>
+        <div class="cards">
+          <a class="card" href="emm386.html"><h2>EMM386</h2>
+            <p data-lang="fr">V86, EMS, UMB, VCPI. Encore nommé CEMM dans le dépôt.</p>
+            <p data-lang="en">V86, EMS, UMBs, VCPI. Still named CEMM in the tree.</p></a>
+          <a class="card" href="smartdrv.html"><h2>SMARTDRV</h2>
+            <p data-lang="fr">Nom de code Bambi. Cache XMS sous INT 13h.</p>
+            <p data-lang="en">Codename Bambi. XMS cache under INT 13h.</p></a>
+          <a class="card" href="dblspace.html"><h2>DoubleSpace</h2>
+            <p data-lang="fr">MagicDrv, CVF, MAGICPATCH dans ALLOCATE.</p>
+            <p data-lang="en">MagicDrv, CVF, MAGICPATCH in ALLOCATE.</p></a>
+          <a class="card" href="int13.html"><h2>INT 13h</h2>
+            <p data-lang="fr">BDS, call_orig13, CHS, le BIOS disque d’IO.SYS.</p>
+            <p data-lang="en">BDS, call_orig13, CHS, IO.SYS’s disk BIOS.</p></a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">5 · Services et compatibilité</h2>
+        <h2 class="saga" data-lang="en">5 · Services and compatibility</h2>
+        <div class="cards">
+          <a class="card" href="int24.html"><h2>INT 24h</h2>
+            <p>Abort, Retry, Ignore, Fail. HardErr, Ctrl-C.</p></a>
+          <a class="card" href="ioctl.html"><h2>IOCTL</h2>
+            <p data-lang="fr">AH=44h, device vs fichier, generic IOCTL.</p>
+            <p data-lang="en">AH=44h, device vs file, generic IOCTL.</p></a>
+          <a class="card" href="mode.html"><h2>MODE</h2>
+            <p data-lang="fr">Le CLI d’IOCTL : CO80, COM1:9600, CP PREP.</p>
+            <p data-lang="en">IOCTL’s CLI: CO80, COM1:9600, CP PREP.</p></a>
+          <a class="card" href="share.html"><h2>SHARE</h2>
+            <p>JShare, deny-*, verrous 5Ch.</p></a>
+          <a class="card" href="print.html"><h2>PRINT</h2>
+            <p data-lang="fr">Spouleur, INT 28, même schéma résident/transient.</p>
+            <p data-lang="en">Spooler, INT 28, same resident/transient scheme.</p></a>
+          <a class="card" href="nls.html"><h2>NLS</h2>
+            <p data-lang="fr">KEYB, COUNTRY, pages de codes, DBCS.</p>
+            <p data-lang="en">KEYB, COUNTRY, code pages, DBCS.</p></a>
+          <a class="card" href="setver.html"><h2>SETVER</h2>
+            <p data-lang="fr">Mentir sur AH=30h. IBMCACHE, Windows, table dans l’EXE.</p>
+            <p data-lang="en">Lying about AH=30h. IBMCACHE, Windows, table inside the EXE.</p></a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">6 · Utilitaires et coquille</h2>
+        <h2 class="saga" data-lang="en">6 · Utilities and the shell</h2>
+        <div class="cards">
+          <a class="card" href="ansi.html"><h2>ANSI.SYS</h2>
+            <p data-lang="fr">CON « fancy », CSI, /X /L /K, neige CGA.</p>
+            <p data-lang="en">“Fancy” CON, CSI, /X /L /K, CGA snow.</p></a>
+          <a class="card" href="ramdrive.html"><h2>RAMDRIVE</h2>
+            <p data-lang="fr">FAT en XMS/EMS, BPB maison, /E /A.</p>
+            <p data-lang="en">FAT in XMS/EMS, homemade BPB, /E /A.</p></a>
+          <a class="card" href="power.html"><h2>POWER</h2>
+            <p>APM, HLT, idle INT 28, V86.</p></a>
+          <a class="card" href="fastopen.html"><h2>FASTOPEN</h2>
+            <p data-lang="fr">Cache de chemins, spec J.K., hooks dans OPEN.</p>
+            <p data-lang="en">Path cache, J.K. spec, hooks in OPEN.</p></a>
+          <a class="card" href="recover.html"><h2>RECOVER</h2>
+            <p data-lang="fr">Un fichier par chaîne, nibble FAT12, FCB DOS 5.</p>
+            <p data-lang="en">One file per chain, FAT12 nibble, DOS 5 FCB.</p></a>
+          <a class="card" href="debug.html"><h2>DEBUG</h2>
+            <p data-lang="fr">Assemble, trace, INT 21h à la main, EMS.</p>
+            <p data-lang="en">Assemble, trace, INT 21h by hand, EMS.</p></a>
+          <a class="card" href="mem.html"><h2>MEM</h2>
+            <p data-lang="fr">Carte des arènes, /C /D /F, XMS/EMS.</p>
+            <p data-lang="en">Arena map, /C /D /F, XMS/EMS.</p></a>
+          <a class="card" href="interlnk.html"><h2>Interlnk</h2>
+            <p data-lang="fr">FastLynx, client bloc, CRC, série/parallèle.</p>
+            <p data-lang="en">FastLynx, block client, CRC, serial/parallel.</p></a>
+          <a class="card" href="chemins.html"><h2>SUBST · JOIN · APPEND</h2>
+            <p data-lang="fr">CDS, lettres menteuses, PATH des données.</p>
+            <p data-lang="en">CDS, lying letters, a PATH for data.</p></a>
+          <a class="card" href="dosshell.html"><h2>DOSSHELL</h2>
+            <p data-lang="fr">COW, swapper WOA, INT 2Fh vers COMMAND.</p>
+            <p data-lang="en">COW, WOA swapper, INT 2Fh into COMMAND.</p></a>
+        </div>
+
+        <h2 class="saga" data-lang="fr">7 · La boîte cmd/ jusqu’au bout</h2>
+        <h2 class="saga" data-lang="en">7 · The cmd/ box, emptied</h2>
+        <div class="cards">
+          <a class="card" href="xcopy.html"><h2>XCOPY</h2>
+            <p data-lang="fr">Arbre en RAM, REPLACE, EXPAND SZDD.</p>
+            <p data-lang="en">Tree in RAM, REPLACE, EXPAND SZDD.</p></a>
+          <a class="card" href="backup.html"><h2>BACKUP</h2>
+            <p data-lang="fr">CONTROL.001 + BACKUP.001, /Zp, deux époques.</p>
+            <p data-lang="en">CONTROL.001 + BACKUP.001, /Zp, two eras.</p></a>
+          <a class="card" href="filtres.html"><h2 data-lang="fr">Filtres</h2><h2 data-lang="en">Filters</h2>
+            <p>MORE, FIND, SORT 64K, FC, COMP.</p></a>
+          <a class="card" href="doskey.html"><h2>DOSKEY</h2>
+            <p data-lang="fr">Anneau d’historique, macros, INT 2Fh 4800h.</p>
+            <p data-lang="en">History ring, macros, INT 2Fh 4800h.</p></a>
+          <a class="card" href="edlin.html"><h2>EDLIN</h2>
+            <p data-lang="fr">L’étoile, le .BAK, rustines MZ 1983.</p>
+            <p data-lang="en">The asterisk, the .BAK, MZ 1983 patches.</p></a>
+          <a class="card" href="attrib.html"><h2>ATTRIB</h2>
+            <p>LABEL, TREE, SYS — répertoire et secteur 0.</p></a>
+          <a class="card" href="graph.html"><h2>GRAPHICS</h2>
+            <p data-lang="fr">PrtSc graphique, GRAFTABL INT 1Fh.</p>
+            <p data-lang="en">Graphics PrtSc, GRAFTABL INT 1Fh.</p></a>
+          <a class="card" href="aide.html"><h2>HELP</h2>
+            <p data-lang="fr">DOSHELP.HLP + spawn /?. CHOICE absent.</p>
+            <p data-lang="en">DOSHELP.HLP + spawn /?. CHOICE missing.</p></a>
+          <a class="card" href="loadfix.html"><h2>LOADFIX</h2>
+            <p>EXE2BIN, PRINTFIX, WINA20.386.</p></a>
+          <a class="card" href="restes.html"><h2 data-lang="fr">Restes</h2><h2 data-lang="en">Leftovers</h2>
+            <p data-lang="fr">ADDDRV MSKK, REDIR sans source, MIRROR CPS.</p>
+            <p data-lang="en">ADDDRV MSKK, REDIR no source, MIRROR CPS.</p></a>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Textes pédagogiques originaux. Extraits issus du code source MS-DOS&nbsp;6
+        (Microsoft Confidential, © Microsoft Corporation 1991). Site statique,
+        sans cadriciel — HTML5, CSS3, JavaScript.
+      </p>
+      <p data-lang="en">
+        Original explanatory text. Excerpts from the MS-DOS&nbsp;6 source
+        (Microsoft Confidential, © Microsoft Corporation 1991). Static site,
+        no framework — HTML5, CSS3, JavaScript.
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INT 24 — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="int21.html">INT 21h</a>
+      <a href="int24.html" aria-current="page">INT 24</a>
+      <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      <a href="command.html">COMMAND</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#abort">Abort Retry Ignore Fail</a></li><li><a href="#hard">HardErr</a></li><li><a href="#ctrlc">Ctrl-C</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dos/msctrlc.asm · rucode.asm</p>
+        <h1>INT 24h</h1>
+        <p class="lede" data-lang="fr">« Abort, Retry, Ignore, Fail ? » — le dialogue le plus célèbre de DOS. Ce n’est pas COMMAND.COM qui le décide d’abord : c’est le noyau (<code>HardErr</code>), sur <a href="int21.html#piles">AuxStack</a>, au milieu d’un INT 21h.</p>
+        <p class="lede" data-lang="en">“Abort, Retry, Ignore, Fail?” — DOS’s most famous prompt. COMMAND.COM is not first to decide: the kernel is (<code>HardErr</code>), on the <a href="int21.html#piles">AuxStack</a>, in the middle of an INT 21h.</p>
+      </header>
+      <section class="topic" id="abort">
+        <h2>Quatre réponses</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">La disquette n’est pas prête</span>
+            <span data-lang="en">The floppy is not ready</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Retry : on réessaie. Ignore : on prétend que ça a marché (dangereux). Fail : l’appel rend une erreur (ce que les programmes « modernes » préfèrent). Abort : on tue le processus — <a href="exec.html#exit">Abort_Inner</a>.</p></div>
+            <div data-lang="en"><p>Retry: try again. Ignore: pretend it worked (dangerous). Fail: the call returns an error (what “modern” programs prefer). Abort: kill the process — <a href="exec.html#exit">Abort_Inner</a>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>allowed_fail · INT 24 off</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Chaque appel dit ce qui est permis (<code>ALLOWED</code> dans FAT : souvent fail seulement). L’open étendu peut couper INT 24 (<code>INT_24_ERROR</code> / <code>EXT_OPEN_I24_OFF</code> déjà vus dans <a href="fichiers.html#lire">$READ</a>). M024 : pas de Fail/Ignore si on n’est pas vraiment dans un INT 24 (Ctrl-P / PrintScreen).</p></div>
+            <div data-lang="en"><p>Each call says what is allowed (<code>ALLOWED</code> in FAT: often fail only). Extended open can turn INT 24 off (<code>INT_24_ERROR</code> / <code>EXT_OPEN_I24_OFF</code> already in <a href="fichiers.html#lire">$READ</a>). M024: no Fail/Ignore if we are not really in INT 24 (Ctrl-P / PrintScreen).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>sf_busy = −1</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Si INT 24 explose pendant OPEN, la SFT marquée <code>−1</code> doit pouvoir être récupérée (page <a href="fichiers.html#sft">SFT</a>). Nsp/Nss : un seul niveau de réentrance — CROSSTALK.</p>
+            <p class="note" data-lang="en">If INT 24 blows up during OPEN, the SFT marked <code>−1</code> must be reclaimable (<a href="fichiers.html#sft">SFT</a> page). Nsp/Nss: one re-entrancy level — CROSSTALK.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="hard">
+        <h2>HardErr</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Le noyau appelle le PSP</span>
+            <span data-lang="en">The kernel calls the PSP</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le vecteur 24h du processus (sauvé dans le PSP, restauré à l’<a href="exec.html#exit">EXIT</a>) reçoit AH=flags, DI=code. COMMAND.COM installe le sien dans <code>rucode.asm</code> : le texte français/anglais que l’on connaît.</p></div>
+            <div data-lang="en"><p>The process’s 24h vector (saved in the PSP, restored at <a href="exec.html#exit">EXIT</a>) gets AH=flags, DI=code. COMMAND.COM installs its own in <code>rucode.asm</code>: the familiar French/English text.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>ErrorMode · GetExtendedError</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Pendant INT 24, <code>ErrorMode ≠ 0</code> : les appels AH=01–0Ch restent sur AuxStack. PRINT utilise <code>AH=59h</code> depuis ici — d’où sa pile dédiée (page INT 21h).</p></div>
+            <div data-lang="en"><p>During INT 24, <code>ErrorMode ≠ 0</code>: AH=01–0Ch stay on AuxStack. PRINT uses <code>AH=59h</code> from here — hence its dedicated stack (INT 21h page).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>M011 NEC</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Autrefois DOS mettait <code>F202h</code> dans les flags au retour (bit 1 toujours à 1). Les clones NEC 8086 utilisent ce bit « undocumented » : M011 préserve son état.</p>
+            <p class="note" data-lang="en">DOS used to store <code>F202h</code> in the flags on return (bit 1 always 1). NEC 8086 clones use that “undocumented” bit: M011 preserves its state.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="ctrlc">
+        <h2>Ctrl-C · INT 23h</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">L’autre interruption « humaine »</span>
+            <span data-lang="en">The other “human” interrupt</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>CNTCHAND</code> / INT 23h : l’utilisateur veut arrêter. COMMAND demande parfois confirmation en batch. <code>DidCtrlC</code> colore ensuite le <a href="exec.html#exit">code de sortie</a>.</p></div>
+            <div data-lang="en"><p><code>CNTCHAND</code> / INT 23h: the user wants to stop. COMMAND sometimes asks for confirmation in a batch file. <code>DidCtrlC</code> then colours the <a href="exec.html#exit">exit code</a>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Break · AH=33h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le flag Break (chemin court du dispatcher) dit si on teste Ctrl-C à chaque appel ou seulement sur CON. <code>DSKSTATCHK</code> le fait avant les appels disque.</p></div>
+            <div data-lang="en"><p>The Break flag (dispatcher fast path) says whether we test Ctrl-C on every call or only on CON. <code>DSKSTATCHK</code> does it before disk calls.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>DIVOV</span></summary>
+          <div class="level-body">
+            <p class="note">Le même fichier gère INT 0 (division par zéro) : <code>DIVOV</code> / <code>RealDivOv</code>. Tout ce qui « tue ou interrompt » un process passe par ici avant EXIT.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dos/msctrlc.asm<small>FATAL, HardErr, CNTCHAND, DIVOV</small></span>
+          <span>cmd/command/rucode.asm<small>dialogue, INT 24 résident</small></span>
+          <span>dos/msdisp.asm<small>ErrorMode, AuxStack</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Sans Fail, beaucoup d’appels FAT n’auraient que Abort — d’où <code>allowed_fail</code> dans UNPACK.</p>
+    <p data-lang="en">Without Fail, many FAT calls would only have Abort — hence <code>allowed_fail</code> in UNPACK.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

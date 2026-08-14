@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANSI.SYS — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="ioctl.html">IOCTL</a>
+      <a href="ansi.html" aria-current="page">ANSI</a>
+      <a href="config.html">CONFIG</a>
+      <a href="nls.html">NLS</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#esc">ESC[</a></li><li><a href="#con">CON</a></li><li><a href="#opt">/X /L /K</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/ansi/ansi.asm · « FANCY CONSOLE DRIVER »</p>
+        <h1>ANSI.SYS</h1>
+        <p class="lede" data-lang="fr">Le pilote qui rend CON intelligent : couleurs, curseur, <code>PROMPT $e[1;33m</code>. Sans lui, ECHO n’écrit que des glyphes. Avec lui, une séquence CSI devient un appel INT 10h.</p>
+        <p class="lede" data-lang="en">The driver that makes CON clever: colours, cursor, <code>PROMPT $e[1;33m</code>. Without it, ECHO only writes glyphs. With it, a CSI sequence becomes an INT 10h call.</p>
+      </header>
+      <section class="topic" id="esc">
+        <h2>Séquences</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>ESC [ 2 J</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Un programme écrit vers le handle 1. ANSI reconnaît ESC puis <code>[</code>, accumule les paramètres, et exécute : effacer, déplacer, changer d’attribut. CLS de COMMAND peut s’en passer ; beaucoup de prompts colorés, non.</p></div>
+            <div data-lang="en"><p>A program writes to handle 1. ANSI recognises ESC then <code>[</code>, gathers parameters, and acts: clear, move, change attribute. COMMAND’s CLS can live without it; many coloured prompts cannot.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>ansi.inc · ansivid.inc</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Tables de modes vidéo (CGA…VGA). P4532 : neige sur CGA au scroll. P4533 : scroll cassé en modes Dh–13h. Bug#173 : on pouvait descendre d’une ligne sous le bas de l’écran (<code>$e[25;3H $e[1B</code>).</p></div>
+            <div data-lang="en"><p>Video-mode tables (CGA…VGA). P4532: CGA snow on scroll. P4533: scroll broken in modes Dh–13h. Bug#173: you could go one line below the bottom (<code>$e[25;3H $e[1B</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>ioctl.asm</span></summary>
+          <div class="level-body">
+            <p class="note">ANSI a son propre IOCTL (page <a href="ioctl.html">IOCTL</a>) pour interroger / forcer le mode. C’est un device CON de plus dans la chaîne : programme → ANSI → CON BIOS.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="con">
+        <h2>Remplacer CON</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>DEVICE=ANSI.SYS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>SYSINIT charge le driver en overlay. Il s’installe comme nouveau CON : les bits <code>devid_device_con_in/out</code> de la SFT pointent ici.</p></div>
+            <div data-lang="en"><p>SYSINIT loads the driver as an overlay. It installs as the new CON: the SFT’s <code>devid_device_con_in/out</code> bits point here.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>raw vs cooked</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>En cooked, ANSI voit chaque octet. En raw (IOCTL), les programmes plein écran by-passent souvent les séquences et parlent à INT 10h directement.</p></div>
+            <div data-lang="en"><p>In cooked mode ANSI sees every byte. In raw (IOCTL), full-screen programs often skip sequences and talk to INT 10h themselves.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>parser.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Machine à états pour les paramètres séparés par <code>;</code>. D375 : la séquence elle-même doit honorer /X (clavier étendu), pas seulement la ligne de commande.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="opt">
+        <h2>/X /L /K</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Trois interrupteurs de DOS 4</span>
+            <span data-lang="en">Three DOS 4 switches</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>/X : fonctions clavier étendues. /L : imposer le nombre de lignes. /K : désactiver le clavier étendu (D479).</p></div>
+            <div data-lang="en"><p>/X: extended keyboard functions. /L: enforce line count. /K: disable the extended keyboard (D479).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Mod 25/30</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>GHG : le scroll « flashait » sur PS/2 modèle 25/30. P4766 : en mode 11h/12h, l’effacement laissait 5 lignes en bas.</p></div>
+            <div data-lang="en"><p>GHG: scroll “flashed” on PS/2 model 25/30. P4766: in modes 11h/12h, erase left 5 lines at the bottom.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>ansiinit.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Init jette après DEVICE=. La table VIDEO_MODE_TABLE (P1767) doit être remplie avant le premier ESC — sinon le premier CLS est faux.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/ansi/ansi.asm<small>CONDEV, séquences</small></span>
+          <span>dev/ansi/ioctl.asm · parser.asm<small>IOCTL, CSI</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Autre DEVICE= qui invente un disque : <a href="ramdrive.html">RAMDRIVE</a>.</p>
+    <p data-lang="en">Another DEVICE= that invents a disk: <a href="ramdrive.html">RAMDRIVE</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

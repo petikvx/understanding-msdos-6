@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAT — Comprendre MS-DOS 6 / Understanding MS-DOS 6</title>
+  <meta name="description" content="Le système de fichiers FAT de MS-DOS 6 expliqué à trois niveaux, en français et en anglais, avec références au code source.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html">
+          <span data-lang="fr">Accueil</span>
+          <span data-lang="en">Home</span>
+        </a>
+        <a href="fat.html" aria-current="page">FAT</a>
+        <a href="fichiers.html">
+          <span data-lang="fr">Fichiers</span>
+          <span data-lang="en">Files</span>
+        </a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html">COMMAND</a>
+        <a href="boot.html">Boot</a>
+        <a href="chkdsk.html">CHKDSK</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true">
+            <span data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+          </button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false">
+            <span data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+          </button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false">
+            <span data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+          </button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false">
+            <span data-lang="fr">Tout</span>
+            <span data-lang="en">All</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title">
+        <span data-lang="fr">Sur cette page</span>
+        <span data-lang="en">On this page</span>
+      </h2>
+      <ol>
+        <li><a href="#quoi">
+          <span data-lang="fr">Qu’est-ce que FAT</span>
+          <span data-lang="en">What FAT is</span>
+        </a></li>
+        <li><a href="#anatomie">
+          <span data-lang="fr">Anatomie d’un volume</span>
+          <span data-lang="en">Anatomy of a volume</span>
+        </a></li>
+        <li><a href="#clusters">Clusters</a></li>
+        <li><a href="#table">
+          <span data-lang="fr">Table d’allocation</span>
+          <span data-lang="en">Allocation table</span>
+        </a></li>
+        <li><a href="#repertoire">
+          <span data-lang="fr">Répertoire et attributs</span>
+          <span data-lang="en">Directory and attributes</span>
+        </a></li>
+        <li><a href="#cycle">
+          <span data-lang="fr">Cycle de vie d’un fichier</span>
+          <span data-lang="en">A file’s life cycle</span>
+        </a></li>
+        <li><a href="#structures">
+          <span data-lang="fr">BPB, DPB, tampons</span>
+          <span data-lang="en">BPB, DPB, buffers</span>
+        </a></li>
+        <li><a href="#outils">
+          <span data-lang="fr">Outils et limites</span>
+          <span data-lang="en">Tools and limits</span>
+        </a></li>
+        <li><a href="#sources">
+          <span data-lang="fr">Fichiers sources</span>
+          <span data-lang="en">Source files</span>
+        </a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · dos/ · inc/</p>
+        <h1>FAT</h1>
+        <p class="lede" data-lang="fr">
+          File Allocation Table : le plan que MS-DOS&nbsp;6 tient de chaque disque.
+          Cette page décrit comment le système découpe un volume, enchaîne les
+          clusters, nomme les fichiers et les retrouve — du usage quotidien
+          jusqu’aux routines assembleur du noyau, illustrées champ par champ
+          et ligne par ligne.
+        </p>
+        <p class="lede" data-lang="en">
+          File Allocation Table: the map MS-DOS&nbsp;6 keeps of every disk.
+          This page follows how the system lays out a volume, chains clusters,
+          names files and finds them again — from everyday use down to the
+          kernel’s assembly routines, illustrated field by field and
+          line by line.
+        </p>
+      </header>
+
+      <!-- A ---------------------------------------------------------------- -->
+      <section class="topic" id="quoi">
+        <h2>
+          <span data-lang="fr">Qu’est-ce que FAT</span>
+          <span data-lang="en">What FAT is</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un plan du disque, case par case</span>
+            <span data-lang="en">A map of the disk, cell by cell</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Imaginez un parking numéroté. Un fichier n’occupe pas forcément
+                des places côte à côte : il peut commencer à la place&nbsp;12,
+                continuer à la 47, puis finir à la 48. La <strong>table
+                d’allocation</strong> (FAT) est le panneau qui indique, pour
+                chaque place, « suivante = 47 », « suivante = 48 », ou
+                « fin de fichier ».
+              </p>
+              <p>
+                MS-DOS&nbsp;6 utilise ce plan pour presque tout ce que vous
+                stockez : programmes, documents, et même les dossiers (sauf la
+                racine <code>C:\</code>, qui a un emplacement fixe). Quand vous
+                tapez <code>DIR</code>, le système lit d’abord l’annuaire, puis
+                suit ces chaînes pour savoir où sont les octets.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Think of a numbered car park. A file does not have to sit in
+                adjacent bays: it may start at bay&nbsp;12, continue at 47, and
+                finish at 48. The <strong>File Allocation Table</strong> is the
+                board that says, for each bay, “next = 47”, “next = 48”, or
+                “end of file”.
+              </p>
+              <p>
+                MS-DOS&nbsp;6 uses this map for almost everything you store:
+                programs, documents, and even folders (except the root
+                <code>C:\</code>, which has a fixed home). When you type
+                <code>DIR</code>, the system first reads the directory, then
+                follows those chains to find the bytes.
+              </p>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong data-lang="fr">Ce que le noyau exécute vraiment</strong>
+                <strong data-lang="en">What the kernel actually runs</strong>
+                — <code>inc/dirent.inc</code> · <code>dos/fat.asm</code> · <code>dos/rom.asm</code>
+              </p>
+              <div class="flow">
+                <span>
+                  <code>DIR_FIRST</code>
+                  <small data-lang="fr">1er cluster, dans l’entrée 32&nbsp;o</small>
+                  <small data-lang="en">1st cluster, in the 32-byte entry</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>UNPACK</code>
+                  <small data-lang="fr">lit FAT[cluster]</small>
+                  <small data-lang="en">reads FAT[cluster]</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>IsEOF</code>
+                  <small data-lang="fr">fin de chaîne&nbsp;?</small>
+                  <small data-lang="en">end of chain?</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>FIGREC</code>
+                  <small data-lang="fr">cluster → secteur</small>
+                  <small data-lang="en">cluster → sector</small>
+                </span>
+              </div>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">FAT12 et FAT16, pas FAT32</span>
+            <span data-lang="en">FAT12 and FAT16, not FAT32</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                MS-DOS&nbsp;6 connaît deux largeurs d’entrée : <strong>FAT12</strong>
+                (12 bits, disquettes et très petits volumes) et
+                <strong>FAT16</strong> (16 bits, disques durs). FAT32 n’existe
+                pas encore : il arrivera avec Windows&nbsp;95 OSR2.
+              </p>
+              <p>
+                Chaque entrée de la table peut valoir :
+              </p>
+              <ul>
+                <li><code>0000</code> — cluster libre ;</li>
+                <li>un numéro entre 2 et le dernier cluster — « le suivant est celui-ci » ;</li>
+                <li>une valeur d’<em>end of file</em> (fin de chaîne) ;</li>
+                <li>une marque de secteur défectueux.</li>
+              </ul>
+              <p>
+                DOS choisit 12 ou 16 bits d’après le <em>nombre de clusters</em>
+                du volume, pas d’après une étiquette « FAT12 » écrite quelque
+                part. Au-delà d’environ 4086 clusters, le noyau bascule en 16 bits.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                MS-DOS&nbsp;6 understands two entry widths: <strong>FAT12</strong>
+                (12 bits, floppies and very small volumes) and
+                <strong>FAT16</strong> (16 bits, hard disks). FAT32 does not
+                exist yet; it arrives with Windows&nbsp;95 OSR2.
+              </p>
+              <p>
+                Each table entry may be:
+              </p>
+              <ul>
+                <li><code>0000</code> — a free cluster;</li>
+                <li>a number between 2 and the last cluster — “the next one is this”;</li>
+                <li>an <em>end of file</em> value (end of the chain);</li>
+                <li>a bad-sector mark.</li>
+              </ul>
+              <p>
+                DOS picks 12 or 16 bits from the volume’s <em>cluster count</em>,
+                not from a “FAT12” label written somewhere. Past roughly 4086
+                clusters, the kernel switches to 16 bits.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>4096 − 10</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le test canonique est une comparaison de
+                <code>dpb_max_cluster</code> à la constante <code>4096-10</code>
+                (soit 4086). On la retrouve dans <code>IsEOF</code>,
+                <code>UNPACK</code>, <code>PACK</code>, <code>MAPCLUSTER</code>
+                et dans <code>misc.asm</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The canonical test compares <code>dpb_max_cluster</code> with
+                the constant <code>4096-10</code> (4086). It appears in
+                <code>IsEOF</code>, <code>UNPACK</code>, <code>PACK</code>,
+                <code>MAPCLUSTER</code>, and in <code>misc.asm</code>.
+              </p>
+            </div>
+            <p class="illust__cap">dos/fat.asm — IsEOF</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>CMP  ES:[BP.dpb_max_cluster],4096-10</pre>
+                <p data-lang="fr">Plus de 4086 clusters&nbsp;? Alors FAT16.</p>
+                <p data-lang="en">More than 4086 clusters? Then FAT16.</p>
+              </div>
+              <div class="anno__row">
+                <pre>JAE  EOF16</pre>
+                <p data-lang="fr">Oui → comparer à <code>0FFF8h</code>.</p>
+                <p data-lang="en">Yes → compare with <code>0FFF8h</code>.</p>
+              </div>
+              <div class="anno__row">
+                <pre>cmp  bx,0FF0h / CMP BX,0FF8h</pre>
+                <p data-lang="fr">FAT12 : EOF si <code>FF0</code> (média F0) ou ≥ <code>FF8</code>.</p>
+                <p data-lang="en">FAT12: EOF if <code>FF0</code> (media F0) or ≥ <code>FF8</code>.</p>
+              </div>
+              <div class="anno__row">
+                <pre>CMP  BX,0FFF8h</pre>
+                <p data-lang="fr">FAT16 : EOF si ≥ <code>FFF8</code>. <code>JAE</code> = oui.</p>
+                <p data-lang="en">FAT16: EOF if ≥ <code>FFF8</code>. <code>JAE</code> = yes.</p>
+              </div>
+            </div>
+            <p class="note" data-lang="fr">
+              Commentaire d’origine (août 1986) : <code>0FF0h</code> est aussi
+              accepté comme EOF, pour les médias dont l’octet descripteur vaut
+              <code>F0</code> (« Other »). Les valeurs habituelles restent
+              <code>FF8–FFF</code> / <code>FFF8–FFFF</code>.
+            </p>
+            <p class="note" data-lang="en">
+              Original comment (August 1986): <code>0FF0h</code> is also
+              accepted as EOF, for media whose descriptor byte is
+              <code>F0</code> (“Other”). The usual values remain
+              <code>FF8–FFF</code> / <code>FFF8–FFFF</code>.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <!-- B ---------------------------------------------------------------- -->
+      <section class="topic" id="anatomie">
+        <h2>
+          <span data-lang="fr">Anatomie d’un volume</span>
+          <span data-lang="en">Anatomy of a volume</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Cinq zones, toujours dans le même ordre</span>
+            <span data-lang="en">Five zones, always in the same order</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un disque formaté par MS-DOS n’est pas un tas d’octets
+                indifférencié. Il commence par un secteur d’amorçage (qui
+                décrit le reste), puis une ou deux copies de la table FAT,
+                puis l’annuaire de la racine, puis enfin la grande zone de
+                données où vivent les fichiers.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A disk formatted by MS-DOS is not an undifferentiated heap of
+                bytes. It starts with a boot sector (which describes the rest),
+                then one or two copies of the FAT, then the root directory,
+                and finally the large data area where files live.
+              </p>
+            </div>
+            <div class="volume-bar" role="img" aria-hidden="true">
+              <span class="boot">Boot</span>
+              <span class="fat1">FAT&nbsp;1</span>
+              <span class="fat2">FAT&nbsp;2</span>
+              <span class="root">Root</span>
+              <span class="data">Data</span>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong data-lang="fr">Même dessin, noms du DPB</strong>
+                <strong data-lang="en">Same picture, DPB field names</strong>
+                — <code>inc/dpb.inc</code>
+              </p>
+              <div class="flow">
+                <span>
+                  <code>DPB_FIRST_FAT</code>
+                  <small data-lang="fr">début de FAT&nbsp;1</small>
+                  <small data-lang="en">start of FAT&nbsp;1</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>DPB_FAT_COUNT</code>
+                  <small data-lang="fr">souvent 2 copies</small>
+                  <small data-lang="en">usually 2 copies</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>DPB_DIR_SECTOR</code>
+                  <small data-lang="fr">racine fixe</small>
+                  <small data-lang="en">fixed root</small>
+                </span>
+                <span class="arr" aria-hidden="true">→</span>
+                <span>
+                  <code>DPB_FIRST_SECTOR</code>
+                  <small data-lang="fr">cluster&nbsp;2</small>
+                  <small data-lang="en">cluster&nbsp;2</small>
+                </span>
+              </div>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Le BPB, carte d’identité du disque</span>
+            <span data-lang="en">The BPB, the disk’s identity card</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le <strong>BIOS Parameter Block</strong> (BPB) est une structure
+                posée juste après le saut d’amorçage. Il mélange volontairement
+                géométrie physique (secteurs/piste, têtes) et organisation FAT
+                (nombre de FAT, taille d’un cluster, nombre d’entrées racine).
+              </p>
+              <p>
+                <code>BPB_TOTALSECTORS</code> est un mot 16 bits : au-delà de
+                32&nbsp;Mo, DOS&nbsp;4+ met ce champ à zéro et utilise
+                <code>BPB_BIGTOTALSECTORS</code> (32 bits). C’est le format
+                « huge » que MS-DOS&nbsp;6 hérite et que FDISK étiquette parfois
+                type de partition 6.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The <strong>BIOS Parameter Block</strong> (BPB) sits just after
+                the boot jump. It deliberately mixes physical geometry
+                (sectors/track, heads) with FAT layout (FAT count, cluster
+                size, root-entry count).
+              </p>
+              <p>
+                <code>BPB_TOTALSECTORS</code> is a 16-bit word: past 32&nbsp;MB,
+                DOS&nbsp;4+ zeroes that field and uses
+                <code>BPB_BIGTOTALSECTORS</code> (32 bits). That is the
+                “huge” format MS-DOS&nbsp;6 inherits, which FDISK sometimes
+                labels as partition type 6.
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Champ / Field</th>
+                    <th data-lang="fr">Rôle</th>
+                    <th data-lang="en">Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>BPB_BYTESPERSECTOR</code></td>
+                    <td data-lang="fr">Octets par secteur (souvent 512)</td>
+                    <td data-lang="en">Bytes per sector (usually 512)</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_SECTORSPERCLUSTER</code></td>
+                    <td data-lang="fr">Puissance de 2 : 1, 2, 4, 8…</td>
+                    <td data-lang="en">Power of two: 1, 2, 4, 8…</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_RESERVEDSECTORS</code></td>
+                    <td data-lang="fr">Dont le boot ; la FAT commence après</td>
+                    <td data-lang="en">Including the boot; the FAT starts after</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_NUMBEROFFATS</code></td>
+                    <td data-lang="fr">Presque toujours 2</td>
+                    <td data-lang="en">Almost always 2</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_ROOTENTRIES</code></td>
+                    <td data-lang="fr">Nombre fixe d’entrées à la racine</td>
+                    <td data-lang="en">Fixed number of root entries</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_MEDIADESCRIPTOR</code></td>
+                    <td data-lang="fr">Octet média (F0, F8, F9…)</td>
+                    <td data-lang="en">Media byte (F0, F8, F9…)</td>
+                  </tr>
+                  <tr>
+                    <td><code>BPB_SECTORSPERFAT</code></td>
+                    <td data-lang="fr">Longueur d’<em>une</em> copie de la FAT</td>
+                    <td data-lang="en">Length of <em>one</em> FAT copy</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong data-lang="fr">Disposition de <code>A_BPB</code> en tête du secteur 0</strong>
+                <strong data-lang="en">Layout of <code>A_BPB</code> at the start of sector 0</strong>
+                — <code>inc/bpb.inc</code>
+              </p>
+              <div class="ruler" aria-hidden="true">
+                <span>0</span><span></span><span>2</span><span>3</span><span>5</span><span>6</span><span>8</span><span></span><span>11</span><span>13</span><span></span><span></span><span></span><span></span><span></span><span>24</span>
+              </div>
+              <div class="layout-bytes" aria-label="A_BPB">
+                <span class="hi" style="--w:2"><b>BPS</b><i>0–1</i></span>
+                <span style="--w:1"><b>SPC</b><i>2</i></span>
+                <span class="hi" style="--w:2"><b>Res</b><i>3–4</i></span>
+                <span style="--w:1"><b>#F</b><i>5</i></span>
+                <span class="hi" style="--w:2"><b>Root</b><i>6–7</i></span>
+                <span style="--w:2"><b>Tot</b><i>8–9</i></span>
+                <span class="hi" style="--w:1"><b>Med</b><i>10</i></span>
+                <span style="--w:2"><b>SpF</b><i>11–12</i></span>
+                <span style="--w:3"><b>…géom…</b><i>13–23</i></span>
+              </div>
+              <p class="note" style="margin-top:0.65rem">
+                <span data-lang="fr"><code>BPS</code> = <code>BPB_BYTESPERSECTOR</code>, <code>SPC</code> = <code>BPB_SECTORSPERCLUSTER</code>, <code>#F</code> = <code>BPB_NUMBEROFFATS</code>, <code>SpF</code> = <code>BPB_SECTORSPERFAT</code>. Le saut d’amorçage (3&nbsp;o) et l’OEM (8&nbsp;o) sont <em>avant</em> ce bloc, dans <code>EXT_IBMBOOT_HEADER</code>.</span>
+                <span data-lang="en"><code>BPS</code> = <code>BPB_BYTESPERSECTOR</code>, <code>SPC</code> = <code>BPB_SECTORSPERCLUSTER</code>, <code>#F</code> = <code>BPB_NUMBEROFFATS</code>, <code>SpF</code> = <code>BPB_SECTORSPERFAT</code>. The boot jump (3&nbsp;B) and OEM name (8&nbsp;B) sit <em>before</em> this block, in <code>EXT_IBMBOOT_HEADER</code>.</span>
+              </p>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>A_BPB · EXT_IBMBOOT_HEADER</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                La structure assembleur est dans <code>inc/bpb.inc</code>. Le
+                secteur d’amorçage étendu (DOS&nbsp;4+) ajoute signature&nbsp;41,
+                numéro de série, libellé de volume et identifiant système
+                (<code>inc/bootform.inc</code>). DOS recopie une partie de ces
+                informations dans le DPB en mémoire.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The assembly structure lives in <code>inc/bpb.inc</code>. The
+                extended boot sector (DOS&nbsp;4+) adds signature&nbsp;41, a
+                serial number, a volume label and a system id
+                (<code>inc/bootform.inc</code>). DOS copies some of this into
+                the in-memory DPB.
+              </p>
+            </div>
+            <figure class="source">
+              <figcaption>inc/bpb.inc — A_BPB</figcaption>
+              <pre><code>A_BPB                   STRUC
+BPB_BYTESPERSECTOR      DW      ?
+BPB_SECTORSPERCLUSTER   DB      ?
+BPB_RESERVEDSECTORS     DW      ?
+BPB_NUMBEROFFATS        DB      ?
+BPB_ROOTENTRIES         DW      ?
+BPB_TOTALSECTORS        DW      ?
+BPB_MEDIADESCRIPTOR     DB      ?
+BPB_SECTORSPERFAT       DW      ?
+BPB_SECTORSPERTRACK     DW      ?
+BPB_HEADS               DW      ?
+BPB_HIDDENSECTORS       DW      ?
+                        DW      ?
+BPB_BIGTOTALSECTORS     DW      ?
+                        DW      ?
+A_BPB                   ENDS</code></pre>
+            </figure>
+            <p class="note" data-lang="fr">
+              <code>IBMLOADSIZE equ 3</code> dans <code>bootform.inc</code> :
+              le programme de boot doit lire au moins les trois premiers
+              secteurs de <code>IO.SYS</code>, qui doivent former le premier
+              cluster et être consécutifs.
+            </p>
+            <p class="note" data-lang="en">
+              <code>IBMLOADSIZE equ 3</code> in <code>bootform.inc</code>:
+              the boot program must read at least the first three sectors of
+              <code>IO.SYS</code>, which must be the first cluster and must
+              be consecutive.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <!-- C ---------------------------------------------------------------- -->
+      <section class="topic" id="clusters">
+        <h2>Clusters</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">La plus petite « case » d’un fichier</span>
+            <span data-lang="en">The smallest “bay” a file can occupy</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un <strong>cluster</strong> (unité d’allocation) est un groupe
+                de secteurs consécutifs. C’est la plus petite quantité que DOS
+                peut donner à un fichier. Un fichier d’un seul octet prend
+                donc un cluster entier — sur un gros disque, parfois 16 ou
+                32&nbsp;Ko. C’est pour cela que beaucoup de tout petits fichiers
+                « mangent » plus de place que leur taille affichée par
+                <code>DIR</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A <strong>cluster</strong> (allocation unit) is a group of
+                consecutive sectors. It is the smallest amount DOS can give a
+                file. A one-byte file therefore takes a whole cluster — on a
+                large disk, sometimes 16 or 32&nbsp;KB. That is why many tiny
+                files “eat” more space than the size <code>DIR</code> shows.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Le premier cluster utile porte le numéro 2</span>
+            <span data-lang="en">The first useful cluster is number 2</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Les clusters 0 et 1 sont réservés (descripteur média et
+                drapeaux). Les données commencent au cluster&nbsp;2, juste après
+                la racine. La conversion usuelle est :
+              </p>
+              <p>
+                <code>secteur = premier_secteur_données + (cluster − 2) × secteurs_par_cluster</code>
+              </p>
+              <p>
+                Le DPB stocke déjà <code>sectors/cluster − 1</code>
+                (<code>dpb_cluster_mask</code>) et <code>log₂(sectors/cluster)</code>
+                (<code>dpb_cluster_shift</code>), pour remplacer les multiplications
+                par des décalages.
+              </p>
+              <figure class="illust">
+                <p class="illust__cap">
+                  <strong>FIGREC</strong> — <code>dos/rom.asm</code>
+                  <span data-lang="fr">(DX = cluster, BL = secteur dans le cluster)</span>
+                  <span data-lang="en">(DX = cluster, BL = sector-in-cluster)</span>
+                </p>
+                <p class="eq">
+                  <b>DX</b> <span class="op">←</span>
+                  <b>DX − 2</b> <span class="op">≪</span>
+                  <b>dpb_cluster_shift</b>
+                  <span class="op">∨</span>
+                  <b>BL</b>
+                  <span class="op">+</span>
+                  <b>dpb_first_sector</b>
+                </p>
+              </figure>
+            </div>
+            <div data-lang="en">
+              <p>
+                Clusters 0 and 1 are reserved (media descriptor and flags).
+                Data starts at cluster&nbsp;2, right after the root. The usual
+                conversion is:
+              </p>
+              <p>
+                <code>sector = first_data_sector + (cluster − 2) × sectors_per_cluster</code>
+              </p>
+              <p>
+                The DPB already stores <code>sectors/cluster − 1</code>
+                (<code>dpb_cluster_mask</code>) and
+                <code>log₂(sectors/cluster)</code>
+                (<code>dpb_cluster_shift</code>), so multiplies become shifts.
+              </p>
+              <figure class="illust">
+                <p class="illust__cap">
+                  <strong>FIGREC</strong> — <code>dos/rom.asm</code>
+                  (DX = cluster, BL = sector-in-cluster)
+                </p>
+                <p class="eq">
+                  <b>DX</b> <span class="op">←</span>
+                  <b>DX − 2</b> <span class="op">≪</span>
+                  <b>dpb_cluster_shift</b>
+                  <span class="op">∨</span>
+                  <b>BL</b>
+                  <span class="op">+</span>
+                  <b>dpb_first_sector</b>
+                </p>
+              </figure>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>FIGREC · DirRead</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>FIGREC</code> (<code>dos/rom.asm</code>) applique
+                exactement cette formule, avec un compteur 32 bits
+                <code>HIGH_SECTOR</code> pour les volumes &gt;&nbsp;32&nbsp;Mo.
+                L’inverse — secteur vers couple (cluster, index dans le
+                cluster) — est dans <code>DirRead</code> (<code>dos/disk.asm</code>).
+                La racine est un cas à part : <code>DIRStart = 0</code>, et
+                « cluster » y signifie en réalité « toute la racine ».
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>FIGREC</code> (<code>dos/rom.asm</code>) applies that
+                formula exactly, with a 32-bit <code>HIGH_SECTOR</code> for
+                volumes &gt;&nbsp;32&nbsp;MB. The inverse — sector to
+                (cluster, index-in-cluster) — is in <code>DirRead</code>
+                (<code>dos/disk.asm</code>). The root is special:
+                <code>DIRStart = 0</code>, and “cluster” there really means
+                “the whole root”.
+              </p>
+            </div>
+            <p class="illust__cap">dos/rom.asm — FIGREC</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>MOV  CL,ES:[BP.dpb_cluster_shift]
+DEC  DX / DEC DX</pre>
+                <p data-lang="fr">DX = cluster − 2. CL = log₂(secteurs/cluster).</p>
+                <p data-lang="en">DX = cluster − 2. CL = log₂(sectors/cluster).</p>
+              </div>
+              <div class="anno__row">
+                <pre>rotleft: RCL DX,1 / RCL HIGH_SECTOR,1</pre>
+                <p data-lang="fr">Multiplie par 2, CL fois — 32 bits pour les volumes &gt; 32&nbsp;Mo.</p>
+                <p data-lang="en">Multiply by 2, CL times — 32 bits for volumes &gt; 32&nbsp;MB.</p>
+              </div>
+              <div class="anno__row">
+                <pre>OR   DL,BL
+ADD  DX,ES:[BP.dpb_first_sector]</pre>
+                <p data-lang="fr">BL = secteur dans le cluster. Puis origine de la zone data.</p>
+                <p data-lang="en">BL = sector-in-cluster. Then the data-area origin.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- D ---------------------------------------------------------------- -->
+      <section class="topic" id="table">
+        <h2>
+          <span data-lang="fr">La table d’allocation</span>
+          <span data-lang="en">The allocation table</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Suivre la chaîne</span>
+            <span data-lang="en">Following the chain</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                L’entrée de répertoire d’un fichier ne contient pas la liste
+                de tous ses clusters : seulement le <em>premier</em>. Pour
+                lire la suite, DOS ouvre la FAT à cette case, y lit le numéro
+                suivant, et ainsi de suite jusqu’à une marque de fin.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A file’s directory entry does not list every cluster — only
+                the <em>first</em>. To read the rest, DOS opens the FAT at
+                that cell, reads the next number, and so on until an end mark.
+              </p>
+            </div>
+            <p class="chain">
+              <b>DIR_FIRST = 12</b> <i>→</i>
+              <b>UNPACK 12 → 47</b> <i>→</i>
+              <b>UNPACK 47 → 48</b> <i>→</i>
+              <b>IsEOF 48 ?</b>
+            </p>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">12 bits à cheval, 16 bits alignés</span>
+            <span data-lang="en">12 bits straddling, 16 bits aligned</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                En FAT16, chaque entrée tient dans un mot : offset =
+                <code>cluster × 2</code>. En FAT12, une entrée fait un octet
+                et demi. Deux clusters voisins partagent trois octets, et une
+                entrée impaire occupe les 12 bits de poids fort. Pire : ces
+                trois octets peuvent chevaucher la frontière de deux secteurs.
+              </p>
+              <p>
+                Il y a presque toujours <strong>deux copies</strong> de la FAT.
+                Si l’une est illisible, <code>CHKDSK</code> et le noyau
+                tentent l’autre. Les deux doivent rester identiques après
+                chaque allocation.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                In FAT16 each entry is a word: offset =
+                <code>cluster × 2</code>. In FAT12 an entry is one and a half
+                bytes. Two neighbouring clusters share three bytes, and an
+                odd entry occupies the high 12 bits. Worse: those three bytes
+                can straddle a sector boundary.
+              </p>
+              <p>
+                There are almost always <strong>two copies</strong> of the
+                FAT. If one is unreadable, <code>CHKDSK</code> and the kernel
+                try the other. Both must stay identical after every allocation.
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-lang="fr">Valeur (12 / 16 bits)</th>
+                    <th data-lang="en">Value (12 / 16 bit)</th>
+                    <th data-lang="fr">Sens</th>
+                    <th data-lang="en">Meaning</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>000</code> / <code>0000</code></td>
+                    <td data-lang="fr">Libre</td>
+                    <td data-lang="en">Free</td>
+                  </tr>
+                  <tr>
+                    <td><code>002–FEF</code> / <code>0002–FFEF</code></td>
+                    <td data-lang="fr">Lien vers le cluster suivant</td>
+                    <td data-lang="en">Link to the next cluster</td>
+                  </tr>
+                  <tr>
+                    <td><code>FF7</code> / <code>FFF7</code></td>
+                    <td data-lang="fr">Cluster défectueux</td>
+                    <td data-lang="en">Bad cluster</td>
+                  </tr>
+                  <tr>
+                    <td><code>FF8–FFF</code> / <code>FFF8–FFFF</code></td>
+                    <td data-lang="fr">Fin de fichier</td>
+                    <td data-lang="en">End of file</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong data-lang="fr">FAT12 : deux clusters dans trois octets — exactement ce que <code>UNPACK</code> déplie</strong>
+                <strong data-lang="en">FAT12: two clusters in three bytes — exactly what <code>UNPACK</code> unfolds</strong>
+                — <code>dos/fat.asm</code>
+              </p>
+              <div class="nibbles" aria-hidden="false">
+                <div class="nibble-byte">
+                  <em>byte 0</em>
+                  <div><span class="lo">AB</span></div>
+                </div>
+                <div class="nibble-byte">
+                  <em>byte 1 = CD</em>
+                  <div><span class="hi">C</span><span class="lo">D</span></div>
+                </div>
+                <div class="nibble-byte">
+                  <em>byte 2</em>
+                  <div><span class="hi">EF</span></div>
+                </div>
+              </div>
+              <p class="legend">
+                <span><i class="lo"></i><span data-lang="fr">cluster pair</span><span data-lang="en">even cluster</span> = <code>0DAB</code> ← <code>AND DI,0FFFh</code></span>
+                <span><i class="hi"></i><span data-lang="fr">cluster impair</span><span data-lang="en">odd cluster</span> = <code>0EFC</code> ← <code>SHR DI,4</code></span>
+              </p>
+              <p class="note" data-lang="fr">
+                Octets <code>AB CD EF</code> lus en petit-boutiste : le mot aligné pair vaut
+                <code>CDAB</code>, masqué à 12 bits → <code>0DAB</code>. Le mot décalé d’un octet
+                vaut <code>EFCD</code>, décalé de 4 bits → <code>0EFC</code>. Si ces trois octets
+                tombent à cheval sur deux secteurs, <code>MAPCLUSTER</code> pose
+                <code>CLUSSPLIT</code> et rassemble le mot dans <code>CLUSSAVE</code>.
+              </p>
+              <p class="note" data-lang="en">
+                Bytes <code>AB CD EF</code> read little-endian: the even-aligned word is
+                <code>CDAB</code>, masked to 12 bits → <code>0DAB</code>. The word one byte
+                later is <code>EFCD</code>, shifted 4 bits → <code>0EFC</code>. If those three
+                bytes straddle two sectors, <code>MAPCLUSTER</code> sets
+                <code>CLUSSPLIT</code> and rebuilds the word in <code>CLUSSAVE</code>.
+              </p>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>UNPACK · PACK · MAPCLUSTER</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Tout accès à une entrée passe par <code>dos/fat.asm</code>.
+              </p>
+              <ul>
+                <li><code>MAPCLUSTER</code> calcule l’offset
+                  (<code>cluster + cluster/2</code> en FAT12,
+                  <code>2 × cluster</code> en FAT16), divise par la taille de
+                  secteur (raccourci si 512 octets), et ramène le secteur via
+                  <code>GETBUFFRB</code>.</li>
+                <li>Si l’entrée est à cheval, <code>CLUSSPLIT</code> est posé
+                  et les deux moitiés sont rassemblées dans
+                  <code>CLUSSAVE</code>.</li>
+                <li><code>UNPACK</code> lit ; <code>PACK</code> écrit en
+                  préservant le nibble voisin en FAT12, puis marque le tampon
+                  <code>buf_dirty</code>.</li>
+                <li>Le cluster&nbsp;0 n’est <em>jamais</em> lu sur disque
+                  (correctif M014) : la valeur vit dans
+                  <code>CL0FATENTRY</code>.</li>
+              </ul>
+            </div>
+            <div data-lang="en">
+              <p>
+                Every access to an entry goes through <code>dos/fat.asm</code>.
+              </p>
+              <ul>
+                <li><code>MAPCLUSTER</code> computes the offset
+                  (<code>cluster + cluster/2</code> on FAT12,
+                  <code>2 × cluster</code> on FAT16), divides by the sector
+                  size (fast path if 512 bytes), and brings the sector in
+                  with <code>GETBUFFRB</code>.</li>
+                <li>If the entry straddles a boundary, <code>CLUSSPLIT</code>
+                  is set and the two halves are gathered in
+                  <code>CLUSSAVE</code>.</li>
+                <li><code>UNPACK</code> reads; <code>PACK</code> writes,
+                  preserving the neighbouring nibble on FAT12, then marks the
+                  buffer <code>buf_dirty</code>.</li>
+                <li>Cluster&nbsp;0 is <em>never</em> read from disk
+                  (fix M014): the value lives in
+                  <code>CL0FATENTRY</code>.</li>
+              </ul>
+            </div>
+            <p class="illust__cap" style="margin-top:0.75rem">
+              <span data-lang="fr"><code>UNPACK</code> après <code>MAPCLUSTER</code> — le mot est dans <code>DI</code></span>
+              <span data-lang="en"><code>UNPACK</code> after <code>MAPCLUSTER</code> — the word is in <code>DI</code></span>
+            </p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>CALL    MAPCLUSTER
+MOV     DI,[DI]</pre>
+                <p data-lang="fr">DS:DI pointe l’entrée ; on charge le mot (12 ou 16 bits bruts).</p>
+                <p data-lang="en">DS:DI points at the entry; load the raw word (12 or 16 bits).</p>
+              </div>
+              <div class="anno__row">
+                <pre>JNZ     High12          ; ZF = cluster impair</pre>
+                <p data-lang="fr"><code>MAPCLUSTER</code> a fait <code>TEST AL,1</code> : ZF=0 → nibble haut.</p>
+                <p data-lang="en"><code>MAPCLUSTER</code> did <code>TEST AL,1</code>: ZF=0 → high nibble.</p>
+              </div>
+              <div class="anno__row">
+                <pre>High12: SHR DI,1 × 4
+Unpack12: AND DI,0FFFh</pre>
+                <p data-lang="fr">Impair : décale. Pair FAT12 : masque. FAT16 : on garde le mot entier.</p>
+                <p data-lang="en">Odd: shift. Even FAT12: mask. FAT16: keep the whole word.</p>
+              </div>
+              <div class="anno__row">
+                <pre>CMP SI,4096-10 / JB Unpack12</pre>
+                <p data-lang="fr">Toujours le même seuil : 4086 clusters = frontière 12/16 bits.</p>
+                <p data-lang="en">Same threshold as ever: 4086 clusters = the 12/16-bit border.</p>
+              </div>
+            </div>
+            <figure class="source">
+              <figcaption>dos/fat.asm — MAPCLUSTER (offset dans la table)</figcaption>
+              <pre><code>        MOV     AX,BX                   ; AX = cluster
+        CMP     ES:[BP.dpb_max_cluster],4096-10
+        JAE     Map16                   ; 16-bit: skip the /2
+        SHR     AX,1                    ; AX = cluster/2
+Map16:
+        XOR     DI,DI
+        ADD     AX,BX                   ; byte offset = 1.5× or 2× cluster
+        ADC     DI,DI                   ; high word if FAT &gt; 64K
+        ; puis DIV secteur, GETBUFFRB, éventuellement CLUSSPLIT</code></pre>
+            </figure>
+            <p class="note" data-lang="fr">
+              Si <code>UNPACK</code> reçoit un numéro plus grand que
+              <code>dpb_max_cluster</code>, il force
+              <code>dpb_free_cnt = −1</code> (l’espace libre n’est plus
+              fiable) et lève une erreur fatale INT&nbsp;24
+              (<code>allowed_fail</code>).
+            </p>
+            <p class="note" data-lang="en">
+              If <code>UNPACK</code> is given a number larger than
+              <code>dpb_max_cluster</code>, it forces
+              <code>dpb_free_cnt = −1</code> (free space is no longer
+              trusted) and raises a fatal INT&nbsp;24
+              (<code>allowed_fail</code>).
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <!-- E ---------------------------------------------------------------- -->
+      <section class="topic" id="repertoire">
+        <h2>
+          <span data-lang="fr">Répertoire et attributs</span>
+          <span data-lang="en">Directory and attributes</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un nom 8.3 et quelques drapeaux</span>
+            <span data-lang="en">An 8.3 name and a few flags</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                La racine est un annuaire de taille fixe, créé au formatage.
+                Chaque fichier ou dossier y (ou dans un sous-dossier) a une
+                fiche : un nom d’au plus 8 caractères, une extension d’au plus
+                3, des attributs (lecture seule, caché, système, archive), une
+                date de dernière écriture, et le numéro du premier cluster.
+              </p>
+              <p>
+                La commande <code>ATTRIB</code> change ces drapeaux.
+                <code>DIR /A</code> les utilise pour filtrer l’affichage.
+                Un dossier n’est qu’un fichier un peu spécial, dont le contenu
+                est une liste d’autres fiches — sauf la racine, qui n’est pas
+                un fichier.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The root is a fixed-size directory, created at format time.
+                Every file or folder there (or in a subfolder) has a card:
+                a name of at most 8 characters, an extension of at most 3,
+                attributes (read-only, hidden, system, archive), a last-write
+                date, and the first-cluster number.
+              </p>
+              <p>
+                The <code>ATTRIB</code> command changes those flags.
+                <code>DIR /A</code> uses them to filter the listing.
+                A folder is just a slightly special file whose contents are
+                more cards — except the root, which is not a file.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">32 octets, date empaquetée, cases libres</span>
+            <span data-lang="en">32 bytes, packed date, free slots</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Chaque entrée fait exactement 32 octets. Le premier octet du
+                nom vaut <code>E5h</code> si la case est libre (fichier
+                effacé), et <code>00h</code> si aucune entrée n’a jamais été
+                écrite plus loin — DOS peut alors arrêter le parcours.
+              </p>
+              <p>
+                L’heure tient dans un mot : bits 0–4 = secondes/2, 5–10 =
+                minutes, 11–15 = heures. La date : bits 0–4 = jour, 5–8 =
+                mois, 9–15 = année − 1980. Un dossier hors racine a les
+                attributs <code>10h</code> et une taille affichée à zéro :
+                son « fichier » est la chaîne de clusters de l’annuaire.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Each entry is exactly 32 bytes. The first byte of the name is
+                <code>E5h</code> if the slot is free (deleted file), and
+                <code>00h</code> if nothing has ever been written further
+                along — DOS can then stop scanning.
+              </p>
+              <p>
+                Time fits in a word: bits 0–4 = seconds/2, 5–10 = minutes,
+                11–15 = hours. Date: bits 0–4 = day, 5–8 = month,
+                9–15 = year − 1980. A non-root folder has attribute
+                <code>10h</code> and a displayed size of zero: its “file”
+                is the directory’s cluster chain.
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Bit</th>
+                    <th>Nom / Name</th>
+                    <th>Constante</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>01h</code></td>
+                    <td><span data-lang="fr">Lecture seule</span><span data-lang="en">Read-only</span></td>
+                    <td><code>ATTR_READ_ONLY</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>02h</code></td>
+                    <td>Hidden</td>
+                    <td><code>ATTR_HIDDEN</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>04h</code></td>
+                    <td>System</td>
+                    <td><code>ATTR_SYSTEM</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>08h</code></td>
+                    <td><span data-lang="fr">Étiquette de volume</span><span data-lang="en">Volume label</span></td>
+                    <td><code>ATTR_VOLUME_ID</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>10h</code></td>
+                    <td><span data-lang="fr">Répertoire</span><span data-lang="en">Directory</span></td>
+                    <td><code>ATTR_DIRECTORY</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>20h</code></td>
+                    <td>Archive</td>
+                    <td><code>ATTR_ARCHIVE</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>40h</code></td>
+                    <td>Device</td>
+                    <td><code>ATTR_DEVICE</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong>DIR_ENTRY</strong> — 32&nbsp;octets, offsets de <code>inc/dirent.inc</code>
+              </p>
+              <div class="ruler" aria-hidden="true">
+                <span>0</span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span>10</span><span>11</span><span>12</span><span></span><span>14</span><span></span>
+              </div>
+              <div class="layout-bytes">
+                <span class="hi" style="--w:11"><b>DIR_NAME</b><i>0–10</i></span>
+                <span style="--w:1"><b>ATTR</b><i>11</i></span>
+                <span style="--w:2"><b>CODEPG</b><i>12–13</i></span>
+                <span style="--w:2"><b>EXTCLUS</b><i>14–15</i></span>
+                <span style="--w:1"><b>A2</b><i>16</i></span>
+                <span style="--w:5"><b>DIR_PAD</b><i>17–21</i></span>
+                <span class="hi" style="--w:2"><b>TIME</b><i>22–23</i></span>
+                <span class="hi" style="--w:2"><b>DATE</b><i>24–25</i></span>
+                <span class="hi" style="--w:2"><b>FIRST</b><i>26–27</i></span>
+                <span class="hi" style="--w:2"><b>SIZE_L</b><i>28–29</i></span>
+                <span class="hi" style="--w:2"><b>SIZE_H</b><i>30–31</i></span>
+              </div>
+              <p class="note" data-lang="fr">
+                En surbrillance : les champs que <code>DIR</code> affiche.
+                <code>DIR_NAME[0] = 0E5h</code> (<code>DIRFREE</code>) = case libre ;
+                <code>00h</code> = fin de répertoire alloué. <code>DIR_FIRST</code> est
+                l’entrée de la chaîne FAT.
+              </p>
+              <p class="note" data-lang="en">
+                Highlighted: the fields <code>DIR</code> actually shows.
+                <code>DIR_NAME[0] = 0E5h</code> (<code>DIRFREE</code>) = free slot;
+                <code>00h</code> = end of allocated directory. <code>DIR_FIRST</code>
+                is the start of the FAT chain.
+              </p>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>DIR_ENTRY · ATTR_DEVICE</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                La définition fait autorité dans <code>inc/dirent.inc</code>.
+                Entre l’attribut et l’heure, 10 octets « réservés » ont été
+                réutilisés dès DOS&nbsp;4 : page de code et cluster d’attributs
+                étendus. <code>ATTR_DEVICE</code> (<code>40h</code>) n’apparaît
+                <em>jamais</em> sur le disque : <code>GETPATH</code> le pose
+                en mémoire quand le chemin désigne un périphérique
+                (<code>CON</code>, <code>PRN</code>…).
+              </p>
+              <p>
+                <code>ATTR_CHANGEABLE</code> (R/O + Hidden + System + Archive)
+                est ce que CHMOD a le droit de modifier.
+                <code>BUILDDIR</code> / <code>FREEENT</code> dans
+                <code>dos/mknode.asm</code> créent une entrée et, à
+                l’effacement, relâchent la chaîne via <code>RELEASE</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The authoritative definition is <code>inc/dirent.inc</code>.
+                Between the attribute and the time, 10 “reserved” bytes were
+                reused from DOS&nbsp;4 on: a code page and an extended-attribute
+                cluster. <code>ATTR_DEVICE</code> (<code>40h</code>)
+                <em>never</em> appears on disk: <code>GETPATH</code> sets it
+                in memory when the path names a device
+                (<code>CON</code>, <code>PRN</code>…).
+              </p>
+              <p>
+                <code>ATTR_CHANGEABLE</code> (R/O + Hidden + System + Archive)
+                is what CHMOD is allowed to modify.
+                <code>BUILDDIR</code> / <code>FREEENT</code> in
+                <code>dos/mknode.asm</code> create an entry and, on delete,
+                release the chain through <code>RELEASE</code>.
+              </p>
+            </div>
+            <figure class="source">
+              <figcaption>inc/dirent.inc — DIR_ENTRY</figcaption>
+              <pre><code>DIR_ENTRY   STRUC
+DIR_NAME    db      11 DUP (?)  ; 8.3, space-padded
+DIR_ATTR    db      ?
+DIR_CODEPG  dw      ?           ; DOS 4.00
+DIR_EXTCLUSTER dw   ?
+DIR_ATTR2   db      ?
+DIR_PAD     db      5 DUP (?)
+DIR_TIME    dw      ?
+DIR_DATE    dw      ?
+DIR_FIRST   dw      ?           ; first cluster
+DIR_SIZE_L  dw      ?
+DIR_SIZE_H  dw      ?
+DIR_ENTRY   ENDS
+
+DIRFREE     equ     0E5h        ; dir_name[0] = free slot</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <!-- F ---------------------------------------------------------------- -->
+      <section class="topic" id="cycle">
+        <h2>
+          <span data-lang="fr">Cycle de vie d’un fichier</span>
+          <span data-lang="en">A file’s life cycle</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Créer, grandir, effacer</span>
+            <span data-lang="en">Create, grow, delete</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Créer un fichier, c’est réserver une fiche dans un annuaire
+                et, dès qu’on écrit, prendre un premier cluster. Agrandir le
+                fichier, c’est accrocher d’autres clusters à la chaîne.
+                Effacer, c’est marquer la fiche comme libre
+                (le nom commence alors par un « σ » visuel, en réalité
+                l’octet <code>E5</code>) et rendre les clusters au réservoir.
+                Les octets eux-mêmes restent sur le disque jusqu’à ce qu’un
+                autre fichier les réutilise — d’où les utilitaires de
+                « undelete ».
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Creating a file means reserving a directory slot and, as soon
+                as you write, taking a first cluster. Growing the file means
+                hanging more clusters on the chain. Deleting means marking
+                the slot free (the name then starts with a visual “σ”,
+                actually the byte <code>E5</code>) and returning the clusters
+                to the pool. The bytes themselves stay on disk until another
+                file reuses them — hence “undelete” utilities.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Fragmentation et clusters perdus</span>
+            <span data-lang="en">Fragmentation and lost clusters</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                DOS alloue en général le premier cluster libre qu’il trouve
+                en balayant à partir du dernier alloué. Si le disque a déjà
+                servi, la chaîne d’un fichier n’est plus contiguë : c’est la
+                <strong>fragmentation</strong>. La lecture reste correcte
+                (on suit la FAT) mais plus lente.
+              </p>
+              <p>
+                Si un programme s’arrête au milieu d’une écriture, des
+                clusters peuvent rester marqués occupés sans appartenir à
+                aucune fiche : <code>CHKDSK</code> les signale comme
+                « lost clusters » et propose de les rassembler dans des
+                fichiers <code>FILE0000.CHK</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                DOS usually allocates the first free cluster it finds,
+                scanning from the last one it gave out. Once the disk has
+                been used, a file’s chain is no longer contiguous: that is
+                <strong>fragmentation</strong>. Reads stay correct (the FAT
+                is followed) but slower.
+              </p>
+              <p>
+                If a program dies mid-write, clusters can stay marked busy
+                without belonging to any directory slot: <code>CHKDSK</code>
+                reports them as “lost clusters” and offers to gather them
+                into <code>FILE0000.CHK</code> files.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>ALLOCATE · RELEASE · cluster 0</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>ALLOCATE</code> (<code>dos/rom.asm</code>) part de
+                <code>dpb_next_free</code> et avance. Si la fin du disque
+                est atteinte sans succès et que l’on n’est pas parti de 2,
+                il recommence depuis le cluster&nbsp;2. S’il repartait déjà
+                de 2, le disque est plein (<code>insufficient_disk_space</code>).
+              </p>
+              <p>
+                Pour un fichier encore vide (<code>sf_firclus = 0</code>),
+                le premier cluster alloué est temporairement rangé
+                <em>dans l’entrée FAT du cluster 0</em>, puis recopié dans
+                le SFT. Les auteurs eux-mêmes notent que ce procédé n’est
+                pas réentrant et serait à remplacer par une valeur sur la
+                pile — « CAVEAT PATTERSON ».
+              </p>
+              <p>
+                Pendant l’allocation, un cluster fraîchement pris n’est pas
+                laissé à <code>0000</code> (DOS 2/3 le faisaient jusqu’à la
+                fin de la requête) : il reçoit une marque temporaire pour
+                qu’une autre activation ne le croie pas libre.
+                <code>RELEASE</code> / <code>RELBLKS</code> parcourent la
+                chaîne et remettent les entrées à zéro.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>ALLOCATE</code> (<code>dos/rom.asm</code>) starts at
+                <code>dpb_next_free</code> and walks forward. If it hits the
+                end of the disk without success and did not start at 2, it
+                restarts from cluster&nbsp;2. If it was already starting at 2,
+                the disk is full (<code>insufficient_disk_space</code>).
+              </p>
+              <p>
+                For a still-empty file (<code>sf_firclus = 0</code>), the
+                first allocated cluster is temporarily stored <em>in FAT
+                entry 0</em>, then copied into the SFT. The authors themselves
+                note that this is not re-entrant and should become a stack
+                value — “CAVEAT PATTERSON”.
+              </p>
+              <p>
+                During allocation a freshly taken cluster is not left as
+                <code>0000</code> (DOS 2/3 did that until the request
+                finished): it gets a temporary mark so another activation
+                will not think it free. <code>RELEASE</code> /
+                <code>RELBLKS</code> walk the chain and zero the entries.
+              </p>
+            </div>
+            <figure class="source">
+              <figcaption>dos/rom.asm — ALLOCATE (contrat)</figcaption>
+              <pre><code>; ENTRY  BX = last cluster of file (0 if null file)
+;        CX = number of clusters to allocate
+;        ES:BP = DPB
+;        [THISSFT] -&gt; SFT
+; EXIT   CY set  : insufficient space, CX = how many would have fitted
+;        CY clear: BX = first cluster allocated, FAT updated,
+;                  sf_FIRCLUS set if the file was null</code></pre>
+            </figure>
+            <p class="illust__cap" style="margin-top:0.85rem">
+              <span data-lang="fr">Balayage décrit dans le commentaire d’<code>ALLOCATE</code></span>
+              <span data-lang="en">Scan described in the <code>ALLOCATE</code> comment</span>
+            </p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>start = dpb_next_free   ; « AT THAT POINT »</pre>
+                <p data-lang="fr">On recommence <em>sur</em> ce cluster, pas après — correctif du cas « seul libre = 2 ».</p>
+                <p data-lang="en">Scan <em>at</em> that cluster, not after it — fixes the “only free = 2” case.</p>
+              </div>
+              <div class="anno__row">
+                <pre>UNPACK / PACK … vers max_cluster</pre>
+                <p data-lang="fr">Chaque trou libre est enchaîné ; marque temporaire ≠ 0000 (plus le bug DOS 2/3).</p>
+                <p data-lang="en">Each free hole is chained; temporary mark ≠ 0000 (the DOS 2/3 bug is gone).</p>
+              </div>
+              <div class="anno__row">
+                <pre>if end reached and next_free ≠ 2
+    next_free = 2 ; rescan</pre>
+                <p data-lang="fr">Deuxième passe depuis le cluster&nbsp;2. Si on en venait déjà → disque plein.</p>
+                <p data-lang="en">Second pass from cluster&nbsp;2. If we started there already → disk full.</p>
+              </div>
+              <div class="anno__row">
+                <pre>BX = 0 → PACK cluster 0 = first
+; puis sf_firclus ← UNPACK(0)</pre>
+                <p data-lang="fr">Fichier vide : le 1er cluster transite par <code>CL0FATENTRY</code>. « CAVEAT PATTERSON » : non réentrant.</p>
+                <p data-lang="en">Empty file: first cluster transits through <code>CL0FATENTRY</code>. “CAVEAT PATTERSON”: not re-entrant.</p>
+              </div>
+            </div>
+            <p class="illust__cap" style="margin-top:0.85rem">RELEASE — <code>dos/rom.asm</code></p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>UNPACK → AX = next
+PACK   → 0000 (ou EOF si RELBLKS)
+INC dpb_free_cnt
+BX = AX ; IsEOF ? sinon boucle</pre>
+                <p data-lang="fr">On libère un maillon, on avance. <code>FLUSHBUF</code> écrit les tampons du lecteur.</p>
+                <p data-lang="en">Free one link, walk on. <code>FLUSHBUF</code> writes that drive’s buffers.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- G ---------------------------------------------------------------- -->
+      <section class="topic" id="structures">
+        <h2>
+          <span data-lang="fr">BPB, DPB et tampons</span>
+          <span data-lang="en">BPB, DPB and buffers</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">DOS se souvient de chaque lecteur</span>
+            <span data-lang="en">DOS remembers each drive</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Relire le secteur d’amorçage à chaque
+                <code>TYPE FICHIER.TXT</code> serait trop lent. DOS garde en
+                mémoire une fiche par lecteur logique (A:, B:, C:…) : taille
+                des secteurs, endroit de la FAT, nombre de clusters libres.
+                C’est cette fiche qu’il consulte en permanence.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Re-reading the boot sector on every
+                <code>TYPE FILE.TXT</code> would be too slow. DOS keeps an
+                in-memory card per logical drive (A:, B:, C:…): sector size,
+                where the FAT lives, how many clusters are free. That card
+                is what it consults all the time.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>BPB → DPB</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le <strong>BPB</strong> est sur le disque. Le
+                <strong>DPB</strong> (Drive Parameter Block) en est la copie
+                de travail, allouée au démarrage et chaînée depuis
+                <code>DPBHead</code>. Un changement de disquette doit
+                invalider cette copie : <code>FATREAD_CDS</code> /
+                <code>FATREAD_SFT</code> interrogent le pilote (« le média
+                a-t-il changé ? ») et, le cas échéant, reconstruisent le DPB
+                et jettent les tampons du lecteur.
+              </p>
+              <p>
+                Les secteurs récemment lus (FAT, répertoires, données) vivent
+                dans un cache de tampons. Un tampon modifié est marqué
+                <em>dirty</em> et sera réécrit, souvent en deux exemplaires
+                pour la FAT.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The <strong>BPB</strong> lives on disk. The
+                <strong>DPB</strong> (Drive Parameter Block) is the working
+                copy, allocated at boot and chained from
+                <code>DPBHead</code>. A floppy change must invalidate that
+                copy: <code>FATREAD_CDS</code> / <code>FATREAD_SFT</code>
+                ask the driver (“has the media changed?”) and, if so,
+                rebuild the DPB and drop that drive’s buffers.
+              </p>
+              <p>
+                Recently read sectors (FAT, directories, data) live in a
+                buffer cache. A modified buffer is marked <em>dirty</em> and
+                will be written back, often twice for the FAT.
+              </p>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong data-lang="fr">Copie BPB → DPB au montage du volume</strong>
+                <strong data-lang="en">BPB → DPB copy when the volume is mounted</strong>
+                — <code>inc/bpb.inc</code> → <code>inc/dpb.inc</code>
+              </p>
+              <div class="map2">
+                <span class="hd">BPB</span><span></span><span class="hd">DPB</span>
+                <span>BPB_BYTESPERSECTOR</span><span class="to">→</span><span>DPB_SECTOR_SIZE</span>
+                <span>BPB_SECTORSPERCLUSTER</span><span class="to">→</span><span>DPB_CLUSTER_MASK / SHIFT</span>
+                <span>BPB_RESERVEDSECTORS</span><span class="to">→</span><span>DPB_FIRST_FAT</span>
+                <span>BPB_NUMBEROFFATS</span><span class="to">→</span><span>DPB_FAT_COUNT</span>
+                <span>BPB_ROOTENTRIES</span><span class="to">→</span><span>DPB_ROOT_ENTRIES</span>
+                <span>BPB_SECTORSPERFAT</span><span class="to">→</span><span>DPB_FAT_SIZE</span>
+                <span>BPB_MEDIADESCRIPTOR</span><span class="to">→</span><span>DPB_MEDIA</span>
+              </div>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>dpb.inc · DISK_INFO · buf_dirty</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Champs décisifs du DPB (<code>inc/dpb.inc</code>,
+                <code>h/dpb.h</code>) :
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Decisive DPB fields (<code>inc/dpb.inc</code>,
+                <code>h/dpb.h</code>):
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Champ</th>
+                    <th data-lang="fr">Rôle</th>
+                    <th data-lang="en">Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>DPB_FIRST_FAT</code></td>
+                    <td data-lang="fr">Premier secteur de la FAT</td>
+                    <td data-lang="en">First FAT sector</td>
+                  </tr>
+                  <tr>
+                    <td><code>DPB_FAT_COUNT</code></td>
+                    <td data-lang="fr">Nombre de copies</td>
+                    <td data-lang="en">Number of copies</td>
+                  </tr>
+                  <tr>
+                    <td><code>DPB_MAX_CLUSTER</code></td>
+                    <td data-lang="fr">Dernier cluster + 1 ; seuil 12/16 bits</td>
+                    <td data-lang="en">Last cluster + 1; 12/16-bit threshold</td>
+                  </tr>
+                  <tr>
+                    <td><code>DPB_FIRST_SECTOR</code></td>
+                    <td data-lang="fr">Premier secteur du cluster 2</td>
+                    <td data-lang="en">First sector of cluster 2</td>
+                  </tr>
+                  <tr>
+                    <td><code>DPB_NEXT_FREE</code></td>
+                    <td data-lang="fr">Dernier cluster alloué (heuristique)</td>
+                    <td data-lang="en">Last allocated cluster (hint)</td>
+                  </tr>
+                  <tr>
+                    <td><code>DPB_FREE_CNT</code></td>
+                    <td><code>−1</code> = inconnu</td>
+                    <td><code>−1</code> = unknown</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div data-lang="fr">
+              <p>
+                <code>DISK_INFO</code> (<code>dos/dinfo.asm</code>) sert
+                <code>INT 21h AH=36h</code> (espace libre). Si
+                <code>dpb_free_cnt ≠ −1</code> et que la valeur est
+                inférieure au nombre de clusters, elle est crue. Sinon DOS
+                reparcourt toute la FAT via <code>UNPACK</code> — d’où la
+                lenteur d’un premier <code>DIR</code> sur un gros volume.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>DISK_INFO</code> (<code>dos/dinfo.asm</code>) serves
+                <code>INT 21h AH=36h</code> (free space). If
+                <code>dpb_free_cnt ≠ −1</code> and the value is below the
+                cluster count, it is trusted. Otherwise DOS walks the whole
+                FAT through <code>UNPACK</code> — hence a slow first
+                <code>DIR</code> on a large volume.
+              </p>
+            </div>
+            <figure class="source">
+              <figcaption>dos/dinfo.asm — cache du compteur libre</figcaption>
+              <pre><code>        MOV     DX,ES:[BP.dpb_free_cnt]
+        CMP     DX,-1                   ; valid?
+        JZ      DoScan
+        CMP     DX,CX                   ; reasonable?
+        JB      GotVal
+        ; else fall through and recompute
+DoScan:
+        XOR     DX,DX
+        DEC     CX
+SCANFREE:
+        invoke  UNPACK
+        JNZ     NOTFREECLUS
+        INC     DX
+NOTFREECLUS:
+        INC     BX
+        LOOP    SCANFREE</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <!-- H ---------------------------------------------------------------- -->
+      <section class="topic" id="outils">
+        <h2>
+          <span data-lang="fr">Outils et limites de MS-DOS 6</span>
+          <span data-lang="en">MS-DOS 6 tools and limits</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Les commandes que l’on tape encore</span>
+            <span data-lang="en">The commands people still type</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <ul>
+                <li><code>FORMAT</code> — crée BPB, FAT vides, racine vide.</li>
+                <li><code>FDISK</code> — découpe le disque dur en partitions.</li>
+                <li><code>CHKDSK</code> — vérifie que chaque cluster appartient
+                  à une seule chaîne, ou à aucune.</li>
+                <li><code>ATTRIB</code> — change lecture seule / caché / archive.</li>
+                <li><code>SYS</code> — recopie les fichiers système en tête
+                  du disque, de façon contiguë.</li>
+                <li><code>RECOVER</code> — dernier recours si l’annuaire est
+                  détruit : un fichier par cluster sauvé.</li>
+              </ul>
+            </div>
+            <div data-lang="en">
+              <ul>
+                <li><code>FORMAT</code> — builds a BPB, empty FATs, empty root.</li>
+                <li><code>FDISK</code> — carves the hard disk into partitions.</li>
+                <li><code>CHKDSK</code> — checks that each cluster belongs to
+                  one chain, or to none.</li>
+                <li><code>ATTRIB</code> — changes read-only / hidden / archive.</li>
+                <li><code>SYS</code> — copies the system files to the front
+                  of the disk, contiguously.</li>
+                <li><code>RECOVER</code> — last resort if the directory is
+                  gone: one file per rescued cluster.</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Ce que DOS 6 ne sait pas faire</span>
+            <span data-lang="en">What DOS 6 cannot do</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Pas de longs noms (ils arriveront avec Windows&nbsp;95, sous
+                forme d’entrées empilées). Pas de FAT32 : un volume FAT16 est
+                plafonné à 2&nbsp;Go, et au-delà de quelques centaines de
+                mégaoctets les clusters deviennent gros, donc gaspilleurs.
+                La racine a un nombre d’entrées fixé au formatage (souvent 512
+                sur un disque dur) : on peut « remplir C:\ » sans avoir
+                rempli le disque.
+              </p>
+              <p>
+                DoubleSpace / DriveSpace (compression) se greffe au-dessus de
+                FAT : le noyau continue de voir des clusters ; le pilote
+                comprime les données réelles. <code>ALLOCATE</code> porte
+                même un point d’ancrage <code>MAGICPATCH</code> pour refuser
+                une allocation si le FAT dit « oui » mais que l’espace
+                comprimé dit « non ».
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                No long names (they arrive with Windows&nbsp;95, as stacked
+                entries). No FAT32: a FAT16 volume tops out at 2&nbsp;GB, and
+                past a few hundred megabytes clusters become large and
+                wasteful. The root has an entry count fixed at format time
+                (often 512 on a hard disk): you can “fill C:\” without
+                filling the disk.
+              </p>
+              <p>
+                DoubleSpace / DriveSpace (compression) sits on top of FAT:
+                the kernel still sees clusters; the driver compresses the
+                real data. <code>ALLOCATE</code> even has a
+                <code>MAGICPATCH</code> hook so allocation can fail when the
+                FAT says “yes” but the compressed free space says “no”.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>FORMAT · CHKDSK · FATSECRD</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Les utilitaires vivent sous <code>cmd/</code> :
+                <code>format</code>, <code>chkdsk</code>, <code>fdisk</code>,
+                <code>recover</code>, <code>attrib</code>, <code>sys</code>.
+                Les messages d’erreur FAT sont centralisés dans
+                <code>h/utilmid.h</code> (<code>MSG_CHK_BAD_FAT</code>,
+                <code>MSG_CHK_LOST_CLUSTERS</code>,
+                <code>MSG_CHK_INV_CLUSTER</code>,
+                <code>MSG_FMT_FAT_ERROR</code>…).
+              </p>
+              <p>
+                <code>FATSECRD</code> (<code>dos/disk.asm</code>) relit un
+                secteur de FAT en essayant chaque copie
+                (<code>dpb_FAT_count</code>). Il force
+                <code>HIGH_SECTOR = 0</code> : le code suppose encore que
+                les secteurs de la FAT elle-même tiennent sous la barre des
+                32&nbsp;Mo — vrai pour un volume FAT16 classique, où la table
+                reste près du début du disque.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The utilities live under <code>cmd/</code>:
+                <code>format</code>, <code>chkdsk</code>, <code>fdisk</code>,
+                <code>recover</code>, <code>attrib</code>, <code>sys</code>.
+                FAT error messages are centralised in
+                <code>h/utilmid.h</code> (<code>MSG_CHK_BAD_FAT</code>,
+                <code>MSG_CHK_LOST_CLUSTERS</code>,
+                <code>MSG_CHK_INV_CLUSTER</code>,
+                <code>MSG_FMT_FAT_ERROR</code>…).
+              </p>
+              <p>
+                <code>FATSECRD</code> (<code>dos/disk.asm</code>) rereads a
+                FAT sector, trying each copy
+                (<code>dpb_FAT_count</code>). It forces
+                <code>HIGH_SECTOR = 0</code>: the code still assumes FAT
+                sectors themselves sit below the 32&nbsp;MB line — true for
+                a classic FAT16 volume, where the table stays near the
+                start of the disk.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Sources ---------------------------------------------------------- -->
+      <section class="topic" id="sources">
+        <h2>
+          <span data-lang="fr">Fichiers sources cités</span>
+          <span data-lang="en">Source files cited</span>
+        </h2>
+        <p data-lang="fr">
+          Tous les chemins sont relatifs à <code>ms-dos-6-source-code/</code>.
+        </p>
+        <p data-lang="en">
+          All paths are relative to <code>ms-dos-6-source-code/</code>.
+        </p>
+        <div class="file-index">
+          <span>dos/fat.asm<small>IsEOF, UNPACK, PACK, MAPCLUSTER, FATREAD</small></span>
+          <span>dos/rom.asm<small>ALLOCATE, RELEASE, FIGREC, FNDCLUS, GETEOF</small></span>
+          <span>dos/disk.asm<small>DirRead, FATSECRD, cluster ↔ secteur</small></span>
+          <span>dos/disk2.asm · disk3.asm<small>I/O par cluster, écriture</small></span>
+          <span>dos/mknode.asm<small>BUILDDIR, FREEENT, premier cluster</small></span>
+          <span>dos/dinfo.asm<small>DISK_INFO, dpb_free_cnt</small></span>
+          <span>dos/buf.asm<small>cache de secteurs, buf_dirty</small></span>
+          <span>inc/dirent.inc<small>DIR_ENTRY, attributs, DIRFREE</small></span>
+          <span>inc/dpb.inc · h/dpb.h<small>Drive Parameter Block</small></span>
+          <span>inc/bpb.inc<small>A_BPB</small></span>
+          <span>inc/bootform.inc<small>en-tête de boot étendu, IBMLOADSIZE</small></span>
+          <span>cmd/format · chkdsk · fdisk<small>construction et contrôle du volume</small></span>
+          <span>cmd/recover · attrib · sys<small>réparation, attributs, fichiers système</small></span>
+          <span>h/utilmid.h<small>messages CHKDSK / FORMAT liés à la FAT</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Textes pédagogiques originaux. Extraits issus du code source MS-DOS&nbsp;6
+        (Microsoft Confidential, © Microsoft Corporation 1991). Page modèle du
+        site statique — HTML5, CSS3, JavaScript.
+      </p>
+      <p data-lang="en">
+        Original explanatory text. Excerpts from the MS-DOS&nbsp;6 source
+        (Microsoft Confidential, © Microsoft Corporation 1991). Template page
+        of the static site — HTML5, CSS3, JavaScript.
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

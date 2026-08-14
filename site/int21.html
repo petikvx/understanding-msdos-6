@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INT 21h — Comprendre MS-DOS 6 / Understanding MS-DOS 6</title>
+  <meta name="description" content="Le dispatcher INT 21h de MS-DOS 6 : COMMAND, piles Aux/Io/Dsk, table DISPATCH, chemins courts.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html" aria-current="page">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html">COMMAND</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title"><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#dispatch"><span data-lang="fr">Sélecteur</span><span data-lang="en">Picker</span></a></li>
+        <li><a href="#quoi"><span data-lang="fr">Qu’est-ce qu’INT 21h</span><span data-lang="en">What INT 21h is</span></a></li>
+        <li><a href="#entree"><span data-lang="fr">Entrée COMMAND</span><span data-lang="en">COMMAND entry</span></a></li>
+        <li><a href="#piles"><span data-lang="fr">Trois piles</span><span data-lang="en">Three stacks</span></a></li>
+        <li><a href="#table">DISPATCH</a></li>
+        <li><a href="#courts"><span data-lang="fr">Chemins courts</span><span data-lang="en">Fast paths</span></a></li>
+        <li><a href="#sortie">LeaveDos</a></li>
+        <li><a href="#sources"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · dos/msdisp.asm · mstable.asm</p>
+        <h1>INT 21h</h1>
+        <p class="lede" data-lang="fr">
+          Toutes les pages précédentes aboutissent ici : un
+          <code>INT 21h</code>, AH = le numéro de fonction. Le noyau
+          sauve les registres, choisit une pile, indexe une table, et
+          <code>CALL</code> la routine — <code>$OPEN</code>,
+          <code>$ALLOC</code>, <code>$READ</code>… Cliquez une case.
+        </p>
+        <p class="lede" data-lang="en">
+          Every previous page lands here: an <code>INT 21h</code>, AH =
+          the function number. The kernel saves registers, picks a
+          stack, indexes a table, and <code>CALL</code>s the routine —
+          <code>$OPEN</code>, <code>$ALLOC</code>, <code>$READ</code>…
+          Click a cell.
+        </p>
+      </header>
+
+      <section class="machine" id="dispatch" aria-labelledby="disp-title">
+        <div class="machine__bar">
+          <h2 id="disp-title">
+            <span data-lang="fr">Table DISPATCH, extraits</span>
+            <span data-lang="en">DISPATCH table, excerpts</span>
+          </h2>
+        </div>
+        <div class="panel" style="border-top:0">
+          <h3>AH → routine</h3>
+          <div class="dispatch-grid" data-grid></div>
+          <dl class="dispatch-card" data-card></dl>
+        </div>
+        <p class="machine__say" data-say></p>
+      </section>
+
+      <section class="topic" id="quoi">
+        <h2>
+          <span data-lang="fr">Qu’est-ce qu’INT 21h</span>
+          <span data-lang="en">What INT 21h is</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le guichet unique des programmes</span>
+            <span data-lang="en">The programs’ single counter</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un programme DOS ne parle presque jamais au disque ou au
+                clavier tout seul. Il met un numéro dans AH, éventuellement
+                d’autres arguments dans les registres, et exécute
+                <code>INT 21h</code>. Le processeur saute au vecteur 21h
+                — l’entrée <code>COMMAND</code> de
+                <code>msdisp.asm</code>. Au retour, AX (et parfois CF)
+                dit si ça a marché.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A DOS program almost never talks to the disk or keyboard
+                by itself. It puts a number in AH, maybe other arguments
+                in the registers, and executes <code>INT 21h</code>. The
+                CPU jumps to vector 21h — the <code>COMMAND</code> entry
+                in <code>msdisp.asm</code>. On return, AX (and sometimes
+                CF) says whether it worked.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Deux époques dans la même table</span>
+            <span data-lang="en">Two eras in one table</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                AH=00–24 : héritage CP/M (console, FCB). AH=25+ :
+                « extended functions » (vecteurs, date, puis le groupe
+                XENIX : handles 3Ch–46h, mémoire 48h–4Ah, processus
+                4Bh–4Ch). <code>MaxCall</code> sépare les appels que
+                <code>CALL 5</code> (PSP) a encore le droit de faire.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                AH=00–24: CP/M heritage (console, FCBs). AH=25+:
+                “extended functions” (vectors, date, then the XENIX
+                group: handles 3Ch–46h, memory 48h–4Ah, process
+                4Bh–4Ch). <code>MaxCall</code> is the last function
+                <code>CALL 5</code> (in the PSP) is still allowed to
+                issue.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>dispatch.txt</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le fichier <code>dos/dispatch.txt</code> est le plan de
+                travail de 1983 : quelle routine dans quel .asm, quelles
+                sections critiques (<code>critDisk</code>,
+                <code>critMem</code>, <code>critDevice</code>,
+                <code>critNet</code>). Les appels reçoivent
+                <em>tous</em> les registres sauf CS:IP et SS:SP — d’où
+                l’absence de lecture de la pile utilisateur dans
+                <code>$OPEN</code> ou <code>$ALLOC</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>dos/dispatch.txt</code> is the 1983 work plan:
+                which routine in which .asm, which critical sections
+                (<code>critDisk</code>, <code>critMem</code>,
+                <code>critDevice</code>, <code>critNet</code>). Calls
+                receive <em>every</em> register except CS:IP and SS:SP —
+                hence no reading of the user stack inside
+                <code>$OPEN</code> or <code>$ALLOC</code>.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="entree">
+        <h2>COMMAND</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">On range le manteau avant d’entrer</span>
+            <span data-lang="en">Coats off before going in</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Avant tout travail, DOS empile ES DS BP DI SI DX CX BX
+                AX, note SS:SP de l’appelant, passe sur <em>sa</em>
+                pile, et incrémente <code>InDos</code>. Tant que ce
+                drapeau n’est pas zéro, un TSR sait qu’il ne doit pas
+                rappeler DOS n’importe comment.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Before any work, DOS pushes ES DS BP DI SI DX CX BX AX,
+                notes the caller’s SS:SP, switches to <em>its</em>
+                stack, and increments <code>InDos</code>. While that
+                flag is non-zero, a TSR knows it must not call DOS
+                casually.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>InDos · PDB_User_stack · Nsp/Nss</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>PDB_User_stack</code> reçoit SS:SP pour qu’un
+                EXEC puisse restaurer le père. <code>Nsp</code> /
+                <code>Nss</code> offrent <em>un</em> niveau de
+                réentrance pour qu’un INT 24 puisse rappeler DOS.
+                Commentaire M043 : on les initialise
+                <em>même si InDos est déjà 1</em> — CROSSTALK 3.7 en
+                dépend.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>PDB_User_stack</code> gets SS:SP so EXEC can
+                restore the parent. <code>Nsp</code> / <code>Nss</code>
+                give <em>one</em> level of re-entrancy so an INT 24 can
+                call DOS again. Comment M043: they are initialised
+                <em>even if InDos is already 1</em> — CROSSTALK 3.7
+                depends on it.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>SavRegs · M045 NMI</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/msdisp.asm — COMMAND</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>cli
+cmp  AH, MaxCom
+ja   BadCall
+cmp  AH, SET_CTRL_C_TRAPPING
+jb   SaveAllRegs
+; … 33h, 50h, 51h, 62h, 64h : chemins courts</pre>
+                <p data-lang="fr">AH trop grand → erreur. Quelques numéros évitent toute la machinerie.</p>
+                <p data-lang="en">AH too large → error. A few numbers skip the whole machine.</p>
+              </div>
+              <div class="anno__row">
+                <pre>push ES DS BP DI SI DX CX BX AX
+inc  InDos
+mov  User_SP, SP / User_SS, SS
+mov  SP, OFFSET AuxStack
+sti</pre>
+                <p data-lang="fr">Pile DOS dès AuxStack, interruptions rétablies. M045 : on ne fait plus <code>XCHG BP,SP</code> — ça cassait les NMI.</p>
+                <p data-lang="en">DOS stack from AuxStack on, interrupts back on. M045: no more <code>XCHG BP,SP</code> — it broke NMIs.</p>
+              </div>
+              <div class="anno__row">
+                <pre>mov  BL, AH
+shl  BX, 1
+mov  BX, CS:Dispatch[BX]
+call SS:SaveBX</pre>
+                <p data-lang="fr">Deux octets par entrée. Le <code>CALL</code> part vers <code>$OPEN</code>, <code>$ALLOC</code>…</p>
+                <p data-lang="en">Two bytes per entry. The <code>CALL</code> goes to <code>$OPEN</code>, <code>$ALLOC</code>…</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="piles">
+        <h2>
+          <span data-lang="fr">Trois piles</span>
+          <span data-lang="en">Three stacks</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+            <span data-lang="fr">On ne range pas les assiettes avec les outils</span>
+            <span data-lang="en">Plates and tools do not share a drawer</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                DOS a trois tiroirs de pile. Un appel clavier n’a pas
+                le droit d’écraser ce qu’un appel disque est en train
+                d’utiliser — surtout si une erreur disque (INT 24)
+                rappelle DOS au milieu.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                DOS has three stack drawers. A keyboard call must not
+                overwrite what a disk call is using — especially if a
+                disk error (INT 24) calls DOS again in the middle.
+              </p>
+            </div>
+            <p class="stack-pills">
+              <span class="aux">AuxStack</span>
+              <span class="io">IoStack</span>
+              <span class="dsk">DskStack</span>
+            </p>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+            <span>AH ≤ 12 vs le reste</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <ul>
+                <li><code>AH = 0</code> (ABORT) → toujours DskStack (fermetures, INT 24 possible).</li>
+                <li><code>AH = 59h</code> (GetExtendedError) → reste sur AuxStack : PRINT l’appelle depuis INT 24 / 28.</li>
+                <li><code>AH = 01–0Ch</code> → IoStack, sauf si <code>ErrorMode ≠ 0</code> (déjà dans un INT 24) : on reste sur Aux.</li>
+                <li>Tout le reste → DskStack, INT 28 interdit (<code>IdleInt = 0</code>), ressources serveur relâchées (<code>INT 2Ah AH=82h</code>).</li>
+              </ul>
+            </div>
+            <div data-lang="en">
+              <ul>
+                <li><code>AH = 0</code> (ABORT) → always DskStack (closes, possible INT 24).</li>
+                <li><code>AH = 59h</code> (GetExtendedError) → stays on AuxStack: PRINT calls it from INT 24 / 28.</li>
+                <li><code>AH = 01–0Ch</code> → IoStack, unless <code>ErrorMode ≠ 0</code> (already in INT 24): stay on Aux.</li>
+                <li>Everything else → DskStack, INT 28 off (<code>IdleInt = 0</code>), server resources released (<code>INT 2Ah AH=82h</code>).</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+            <span>DskROut</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>dos/msdisp.asm — choix de pile</figcaption>
+              <pre><code>        or      AH,AH
+        jz      DskROut                 ; ABORT
+        cmp     AH,GetExtendedError
+        jz      DISPCALL                ; rester sur AuxStack
+        cmp     AH,12
+        ja      DskROut
+        cmp     ErrorMode,0
+        jnz     DispCall
+        mov     SP,OFFSET DosData:IoStack
+        …
+DskROut:
+        mov     IdleInt,0
+        mov     SP,OFFSET DosData:DskStack</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="table">
+        <h2>DISPATCH</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+            <span data-lang="fr">AH n’est qu’un index</span>
+            <span data-lang="en">AH is only an index</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                La table dans <code>mstable.asm</code> est une rangée de
+                pointeurs : case 3Dh = <code>$OPEN</code>, case 48h =
+                <code>$ALLOC</code>. Rien de magique. Les cases vides
+                pointent sur <code>NO_OP</code>. Certaines sont marquées
+                CAVEAT PROGRAMMER — officiellement non documentées
+                (<code>$SLEAZEFUNC</code>, get DPB, set PDB…).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The table in <code>mstable.asm</code> is a row of
+                pointers: slot 3Dh = <code>$OPEN</code>, slot 48h =
+                <code>$ALLOC</code>. Nothing magic. Empty slots point at
+                <code>NO_OP</code>. Some are marked CAVEAT PROGRAMMER —
+                officially undocumented (<code>$SLEAZEFUNC</code>, get
+                DPB, set PDB…).
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+            <span data-lang="fr">Ce site recouvre déjà une bande entière</span>
+            <span data-lang="en">This site already covers a whole strip</span>
+          </summary>
+          <div class="level-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>AH</th>
+                    <th>Routine</th>
+                    <th data-lang="fr">Page</th>
+                    <th data-lang="en">Page</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>0Fh–17h</td><td>FCB_*</td><td colspan="2"><a href="fichiers.html#fcb">Fichiers · FCB</a></td></tr>
+                  <tr><td>3Ch–42h</td><td>$CREAT…$LSEEK</td><td colspan="2"><a href="fichiers.html">Fichiers ouverts</a></td></tr>
+                  <tr><td>36h</td><td>$GET_DRIVE_FREESPACE</td><td colspan="2"><a href="fat.html#structures">FAT · DISK_INFO</a></td></tr>
+                  <tr><td>48h–4Ah, 58h</td><td>$ALLOC…$AllocOper</td><td colspan="2"><a href="memoire.html">Mémoire</a></td></tr>
+                  <tr><td>4Bh–4Ch, 31h</td><td>$EXEC, $EXIT, $Keep</td><td colspan="2"><a href="memoire.html#owner">Mémoire · owner</a></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+            <span>short_addr</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>dos/mstable.asm — extrait</figcaption>
+              <pre><code>DISPATCH    LABEL WORD
+        short_addr  $ABORT              ; 00
+        short_addr  $STD_CON_INPUT      ; 01
+        …
+        short_addr  $OPEN               ; 3D
+        short_addr  $CLOSE              ; 3E
+        short_addr  $READ               ; 3F
+        …
+        short_addr  $ALLOC              ; 48
+        short_addr  $DEALLOC            ; 49
+        short_addr  $SETBLOCK           ; 4A
+        short_addr  $EXEC               ; 4B
+        short_addr  $EXIT               ; 4C</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="courts">
+        <h2>
+          <span data-lang="fr">Chemins courts et CALL 5</span>
+          <span data-lang="en">Fast paths and CALL 5</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+            <span data-lang="fr">Parfois on n’entre même pas dans le hall</span>
+            <span data-lang="en">Sometimes you never even enter the lobby</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Get/Set PSP (50h, 51h, 62h), le piégeage Ctrl-C (33h) et
+                un drapeau imprimante (64h) s’exécutent
+                <em>sur la pile du programme</em>, interruptions
+                coupées, sans toucher à InDos. Un serveur réseau peut
+                les appeler à n’importe quel moment.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Get/Set PSP (50h, 51h, 62h), Ctrl-C trapping (33h) and a
+                printer flag (64h) run <em>on the program’s own stack</em>,
+                interrupts off, without touching InDos. A network server
+                can call them at any moment.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+            <span>PSP:0005</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                CP/M appelait le BDOS par un <code>CALL 5</code>. DOS
+                met encore un far call à PSP:0005
+                (<code>PDB_CPM_Call</code>). <code>Call_Entry</code>
+                réordonne la pile pour ressembler à un INT 21h, copie CL
+                dans AH, et refuse tout numéro &gt; <code>MaxCall</code>
+                — seulement le vieux sous-ensemble.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                CP/M called the BDOS with <code>CALL 5</code>. DOS still
+                plants a far call at PSP:0005
+                (<code>PDB_CPM_Call</code>). <code>Call_Entry</code>
+                reorders the stack to look like INT 21h, copies CL into
+                AH, and rejects any number &gt; <code>MaxCall</code> —
+                the old subset only.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+            <span>Call_Entry</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>dos/msdisp.asm — CALL 5</figcaption>
+              <pre><code>Call_Entry:
+        pop     AX              ; IP du far call
+        pop     AX              ; segment
+        pop     User_SP         ; IP du CALL 5
+        pushf
+        cli
+        push    AX
+        push    User_SP         ; pile comme après INT 21h
+        cmp     CL, MaxCall
+        ja      BadCall
+        mov     AH, CL
+        jmp     SHORT SavRegs</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sortie">
+        <h2>LeaveDos</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+            <span data-lang="fr">Rendre les manteaux, IRET</span>
+            <span data-lang="en">Coats back on, IRET</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                La routine revient dans <code>LeaveDos</code> :
+                <code>InDos--</code>, restauration de SS:SP utilisateur,
+                registres, IRET. CF dans les flags sauvés dit au
+                programme si AX est une erreur.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The routine returns into <code>LeaveDos</code>:
+                <code>InDos--</code>, restore the user SS:SP, registers,
+                IRET. CF in the saved flags tells the program whether AX
+                is an error.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+            <span>A20OFF_COUNT</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Si le compteur A20 n’est pas zéro, DOS éteint la ligne
+                A20 <em>avant</em> l’IRET (M068) : certaines applis
+                protégée-copie testent le wrap-around 8086 (FFFF:0010 →
+                0000:0000). Un EXEC vient de poser le bit
+                <code>EXECA20OFF</code> ; le <code>$DEALLOC</code> qui
+                suit (libération du chargeur) arme le compteur. Le
+                dispatcher le consomme ici, pas dans ALLOC.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                If the A20 counter is not zero, DOS turns the A20 line
+                off <em>before</em> the IRET (M068): some copy-protected
+                apps test the 8086 wrap-around (FFFF:0010 → 0000:0000).
+                An EXEC has just set <code>EXECA20OFF</code>; the
+                following <code>$DEALLOC</code> (loader teardown) arms
+                the counter. The dispatcher consumes it here, not in
+                ALLOC.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+            <span>and DOS_FLAG, NOT EXECA20OFF</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Juste après le <code>CALL</code> de la fonction, le bit
+                EXEC est <em>effacé</em> — sauf si l’appel était
+                <code>AX=4B05h</code> (ExecReady), qui revient par
+                LeaveDos sans passer là. Le commentaire : ne rien
+                ajouter entre le CALL et LeaveDos si ça doit s’exécuter
+                aussi pour 4B05h.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Right after the function <code>CALL</code>, the EXEC bit
+                is <em>cleared</em> — unless the call was
+                <code>AX=4B05h</code> (ExecReady), which returns through
+                LeaveDos without passing here. The comment: do not add
+                anything between the CALL and LeaveDos if it must also
+                run for 4B05h.
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2><span data-lang="fr">Fichiers sources cités</span><span data-lang="en">Source files cited</span></h2>
+        <div class="file-index">
+          <span>dos/msdisp.asm<small>COMMAND, Call_Entry, piles, LeaveDos</small></span>
+          <span>dos/mstable.asm<small>DISPATCH, MaxCall, NO_OP</small></span>
+          <span>dos/dispatch.txt<small>plan 1983, critDisk / critMem</small></span>
+          <span>inc/syscall.inc<small>numéros de fonction</small></span>
+          <span>inc/pdb.inc<small>PDB_CPM_Call, PDB_User_stack</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Le carrefour du noyau. FAT, fichiers et mémoire y sont des
+        numéros AH. Extraits MS-DOS&nbsp;6 © Microsoft 1991.
+      </p>
+      <p data-lang="en">
+        The kernel crossroads. FAT, files and memory are AH numbers
+        here. Excerpts from MS-DOS&nbsp;6 © Microsoft 1991.
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+  <script src="js/dispatch.js"></script>
+</body>
+</html>

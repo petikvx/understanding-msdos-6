@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HIMEM — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="boot.html">Boot</a>
+        <a href="config.html">CONFIG</a>
+        <a href="himem.html" aria-current="page">HIMEM</a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#xms">XMS</a></li>
+        <li><a href="#a20">A20</a></li>
+        <li><a href="#hma">HMA</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/himem/himem.asm</p>
+        <h1>HIMEM.SYS</h1>
+        <p class="lede" data-lang="fr">Le pilote XMS : il allume et éteint la 21<sup>e</sup> ligne d’adresse, prête la HMA à DOS, et gère la mémoire au-delà de 1 Mo. Sans lui, les rustines <code>A20OFF_COUNT</code> du noyau n’ont rien à dire au matériel.</p>
+        <p class="lede" data-lang="en">The XMS driver: it turns the 21st address line on and off, lends the HMA to DOS, and manages memory past 1 MB. Without it, the kernel’s <code>A20OFF_COUNT</code> patches have nothing to say to the hardware.</p>
+      </header>
+
+      <section class="topic" id="xms">
+        <h2>XMS</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un autre INT 21h, pour la RAM lointaine</span>
+            <span data-lang="en">Another INT 21h, for far RAM</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les programmes ne touchent pas à l’extended memory tout seuls (le mode réel s’arrête à 1 Mo + HMA). Ils demandent à HIMEM, via INT 2Fh puis un point d’entrée XMS : allouer un bloc, le copier, le rendre.</p></div>
+            <div data-lang="en"><p>Programs do not touch extended memory by themselves (real mode stops at 1 MB + HMA). They ask HIMEM, via INT 2Fh then an XMS entry point: allocate a block, copy it, free it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>himem4 · himem5</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le fichier d’en-tête découpe le travail : <code>himem1</code> commutation A20, <code>himem2</code> init, <code>himem4</code> allocation, <code>himem5</code> copie (souvent INT 15h block move). Windows 3.x exige que <em>ce</em> HIMEM soit plus récent que celui de Compaq (2.50) — d’où le saut à 2.60.</p></div>
+            <div data-lang="en"><p>The header splits the work: <code>himem1</code> A20 switching, <code>himem2</code> init, <code>himem4</code> allocation, <code>himem5</code> copy (often INT 15h block move). Windows 3.x wants <em>this</em> HIMEM newer than Compaq’s (2.50) — hence the jump to 2.60.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>16 Mo EISA</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">2.50 : ignorer la mémoire « super-extended » des cartes EISA au-delà de 16 Mo. Les descripteurs 24 bits (80286) ne savent pas adresser plus loin. I070 : contourner le block move INT 15h sur certaines machines (Tortugas, 30-286).</p>
+            <p class="note" data-lang="en">2.50: ignore “super-extended” memory on EISA boards past 16 MB. 24-bit (80286) descriptors cannot reach further. I070: skip the INT 15h block move on some machines (Tortugas, 30-286).</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="a20">
+        <h2>A20</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le fil qui fait le wrap 8086</span>
+            <span data-lang="en">The wire that makes the 8086 wrap</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sur un 8086, <code>FFFF:0010</code> retombe en <code>0000:0000</code>. Les applis copy-protected testent ça. Sur un 286+, la 21<sup>e</sup> ligne (A20) si elle est à 1 donne plutôt la HMA. HIMEM doit donc parfois <em>éteindre</em> A20 — d’où <code>A20OFF_COUNT</code> dans <a href="int21.html#sortie">LeaveDos</a> et <a href="exec.html">EXEC</a>.</p></div>
+            <div data-lang="en"><p>On an 8086, <code>FFFF:0010</code> wraps to <code>0000:0000</code>. Copy-protected apps test that. On a 286+, the 21st line (A20) if high yields the HMA instead. HIMEM must therefore sometimes <em>turn A20 off</em> — hence <code>A20OFF_COUNT</code> in <a href="int21.html#sortie">LeaveDos</a> and <a href="exec.html">EXEC</a>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>/A20CONTROL:ON|OFF</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Par défaut HIMEM <em>prend</em> le contrôle d’A20 même si elle était déjà allumée (2.50). <code>OFF</code> : ne pas y toucher si elle l’était. 2.37 : retiré un « fix » Chargecard qui empêchait de re-didler A20 après deux sessions Windows réel (Global enable/disable).</p></div>
+            <div data-lang="en"><p>By default HIMEM <em>takes</em> A20 even if it was already on (2.50). <code>OFF</code>: leave it alone if it was on. 2.37: removed a Chargecard “fix” that stopped us diddling A20 after two real-mode Windows sessions (Global enable/disable).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>Toshiba 1600</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">2.60 ajoute une routine A20 spéciale pour le portable Toshiba 1600. <code>IsA20On</code> a été allégé (2.35). Plusieurs machines = plusieurs ports (PS/2, AT, Hornet…) dans <code>himem1.asm</code>.</p>
+            <p class="note" data-lang="en">2.60 adds a special A20 routine for the Toshiba 1600 laptop. <code>IsA20On</code> was slimmed (2.35). Many machines = many ports (PS/2, AT, Hornet…) in <code>himem1.asm</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="hma">
+        <h2>HMA</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">64 Ko pour un seul client</span>
+            <span data-lang="en">64 KB for a single client</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La spec XMS : la HMA va à <em>un</em> demandeur (souvent DOS lui-même via <code>DOS=HIGH</code>). Pas de sous-allocation. C’est pour ça que COMMAND et les buffers restent souvent en bas.</p></div>
+            <div data-lang="en"><p>The XMS spec: the HMA goes to <em>one</em> claimant (often DOS itself via <code>DOS=HIGH</code>). No sub-allocation. That is why COMMAND and buffers often stay low.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>DEVICE=HIMEM.SYS en premier</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>SYSINIT (page <a href="config.html">CONFIG</a>) a besoin de HIMEM <em>avant</em> de déplacer DOS. D’où l’ordre canonique : <code>DEVICE=HIMEM.SYS</code> puis <code>DOS=HIGH</code> puis EMM386 / DEVICEHIGH.</p></div>
+            <div data-lang="en"><p>SYSINIT (<a href="config.html">CONFIG</a> page) needs HIMEM <em>before</em> moving DOS. Hence the canonical order: <code>DEVICE=HIMEM.SYS</code> then <code>DOS=HIGH</code> then EMM386 / DEVICEHIGH.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>Flush · bit 15</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Si le driver est « flushed » (non chargé), on descend le bit 15 des attributs d’en-tête — l’Encyclopedia MS-DOS le demande (commentaire 2.60). Lien avec le noyau : <code>ChkCopyProt</code> / <code>EXECA20OFF</code> dans <code>msproc.asm</code>.</p>
+            <p class="note" data-lang="en">If the driver is “flushed” (not kept), bit 15 of the header attributes is cleared — the MS-DOS Encyclopedia says so (2.60 comment). Kernel link: <code>ChkCopyProt</code> / <code>EXECA20OFF</code> in <code>msproc.asm</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/himem/himem.asm<small>entrée, A20, HMA, historique 2.35–2.60</small></span>
+          <span>dev/himem/himem1.asm<small>commutateurs A20 machine-spécifiques</small></span>
+          <span>dev/himem/himem4.asm<small>allocation XMS</small></span>
+          <span>dos/msdisp.asm<small>A20OFF_COUNT à l’IRET</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Retour au <a href="memoire.html">simulateur d’arènes</a> : HIGH_FIRST n’a de sens qu’après HIMEM + EMM386.</p>
+    <p data-lang="en">Back to the <a href="memoire.html">arena simulator</a>: HIGH_FIRST only makes sense after HIMEM + EMM386.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interlnk — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="interlnk.html" aria-current="page">Interlnk</a>
+      <a href="ioctl.html">IOCTL</a>
+      <a href="config.html">CONFIG</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#cli">Client / serveur</a></li><li><a href="#wire">Série · parallèle</a></li><li><a href="#block">Block driver</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">c6ers/interlnk/ · FastLynx</p>
+        <h1>Interlnk</h1>
+        <p class="lede" data-lang="fr">Deux PC, un câble, les lecteurs de l’un apparaissent sur l’autre. Le client est un driver bloc (comme RAMDRIVE) ; le serveur (<code>INTERSVR</code>) exécute les requêtes. Dans le dépôt, une partie s’appelle encore FastLynx.</p>
+        <p class="lede" data-lang="en">Two PCs, one cable, one machine’s drives appear on the other. The client is a block driver (like RAMDRIVE); the server (<code>INTERSVR</code>) runs the requests. In the tree, part of it is still called FastLynx.</p>
+      </header>
+      <section class="topic" id="cli">
+        <h2>DEVICE=INTERLNK.EXE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>E: = C: du portable</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>COPY E:\AUTOEXEC.BAT C:\ marche. FAT, SFT, COMMAND ne savent pas que les secteurs traversent un câble. Seul le driver client le sait.</p></div>
+            <div data-lang="en"><p>COPY E:\AUTOEXEC.BAT C:\ works. FAT, SFT, COMMAND do not know the sectors cross a cable. Only the client driver does.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>main.c · intersvr</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le serveur est un programme (pas un DEVICE=) qui monopolise la machine : boucle, CRC, écran de statut (<code>percent.asm</code>). Le client, lui, est chargé tôt pour que E: existe au moment de COMMAND.</p></div>
+            <div data-lang="en"><p>The server is a program (not DEVICE=) that owns the machine: loop, CRC, status screen (<code>percent.asm</code>). The client is loaded early so E: exists by the time COMMAND starts.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>int2f.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Multiplex pour cloner le serveur sur le client (<code>clone.c</code>) : on envoie INTERSVR.EXE par le câble la première fois. Installation sans disquette.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="wire">
+        <h2>Deux fils</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>serial.asm · parallel.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Série (null modem) plus lent, plus long. Parallèle (câble Interlnk) plus vite. Le même protocole, deux transports dans <code>fxlib/</code>.</p></div>
+            <div data-lang="en"><p>Serial (null modem) slower, longer. Parallel (Interlnk cable) faster. Same protocol, two transports in <code>fxlib/</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>crctab.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Chaque paquet a un CRC. Un octet perdu sur 3 mètres de série, et la FAT distante serait pourrie. <code>sendrecv.asm</code> / <code>listen.asm</code> : timeout et retry — version câble d’INT 13 retries.</p></div>
+            <div data-lang="en"><p>Each packet has a CRC. One lost byte on 3 metres of serial and the remote FAT would rot. <code>sendrecv.asm</code> / <code>listen.asm</code>: timeout and retry — a cable version of INT 13 retries.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>printer.asm</span></summary>
+          <div class="level-body">
+            <p class="note">On peut aussi rediriger PRN vers l’imprimante de l’autre machine. Client bloc + client caractère. IOCTL traverse le câble.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="block">
+        <h2>Un BDS lointain</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>driver/block.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le client implémente les stratégies d’un block device : init, media check, build BPB, read, write. SYSINIT le traite comme RAMDRIVE. Le BPB vient du serveur.</p></div>
+            <div data-lang="en"><p>The client implements a block device’s strategies: init, media check, build BPB, read, write. SYSINIT treats it like RAMDRIVE. The BPB comes from the server.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>criterr.c</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>INT 24 côté serveur si le portable n’a plus de batterie / câble débranché. Le client voit une erreur disque classique — Abort, Retry.</p></div>
+            <div data-lang="en"><p>INT 24 on the server if the laptop dies / cable unplugged. The client sees a classic disk error — Abort, Retry.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>packets.h</span></summary>
+          <div class="level-body">
+            <p class="note">Les paquets décrivent les RH (request headers) DOS sérialisés. Un READ de 1 secteur = un aller-retour. SMARTDRV sur le client aide beaucoup.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>c6ers/interlnk/main.c<small>serveur</small></span>
+          <span>c6ers/interlnk/driver/<small>client bloc / série / parallèle</small></span>
+          <span>c6ers/interlnk/fxlib/<small>FastLynx, CRC</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Mensonge local sur les lettres, sans câble : <a href="chemins.html">SUBST / JOIN / APPEND</a>.</p>
+    <p data-lang="en">A local lie about drive letters, no cable: <a href="chemins.html">SUBST / JOIN / APPEND</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

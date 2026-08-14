@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DEBUG — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="int21.html">INT 21h</a>
+      <a href="debug.html" aria-current="page">DEBUG</a>
+      <a href="exec.html">EXEC</a>
+      <a href="mem.html">MEM</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#cmd">U D A G T</a></li><li><a href="#load">N L</a></li><li><a href="#ems">EMS</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/debug/debug.asm</p>
+        <h1>DEBUG</h1>
+        <p class="lede" data-lang="fr">L’outil pour appeler INT 21h à la main, voir un PSP, patcher un octet. C’est le laboratoire des autres pages : <code>A</code> assemble, <code>U</code> désassemble, <code>G</code> saute dans FOO.COM comme <a href="exec.html">$EXEC</a>.</p>
+        <p class="lede" data-lang="en">The tool to fire INT 21h by hand, see a PSP, patch a byte. It is the lab for the other pages: <code>A</code> assembles, <code>U</code> disassembles, <code>G</code> jumps into FOO.COM like <a href="exec.html">$EXEC</a>.</p>
+      </header>
+      <section class="topic" id="cmd">
+        <h2>Un mini langage</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>-U 100</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Dump, assemble, trace, go, register, compare, fill, search, hex arithmetic. Chaque commande est un petit interpréteur dans <code>debcom1/2/3.asm</code>.</p></div>
+            <div data-lang="en"><p>Dump, assemble, trace, go, register, compare, fill, search, hex arithmetic. Each command is a small interpreter in <code>debcom1/2/3.asm</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>debasm · debuasm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Assembleur et désassembleur 8086 maison — pas MASM. Assez pour écrire <code>MOV AH,3D</code> / <code>INT 21</code> et voir AX au retour. C’est ainsi qu’on vérifiait la page Fichiers avant qu’elle existe.</p></div>
+            <div data-lang="en"><p>A home-grown 8086 assembler and disassembler — not MASM. Enough to write <code>MOV AH,3D</code> / <code>INT 21</code> and see AX on return. That is how you would have checked the Files page before it existed.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>INT 3 · TF</span></summary>
+          <div class="level-body">
+            <p class="note">Trace pose le trap flag ; les breakpoints sont INT 3. DEBUG est lui-même un processus avec un PSP : il EXEC le programme cible et reprend la main sur INT 3 / INT 1.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="load">
+        <h2>Charger sans COMMAND</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>N FOO.COM · L · G</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Name + Load : lit le fichier au CS:100 comme un COM, ou applique le header MZ. Go lance. Moins de cérémonie que COMMAND, même <code>$EXEC</code> en dessous parfois, parfois lecture brute.</p></div>
+            <div data-lang="en"><p>Name + Load: reads the file at CS:100 like a COM, or applies the MZ header. Go runs it. Less ceremony than COMMAND, sometimes the same <code>$EXEC</code> underneath, sometimes a raw read.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>W · E</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Write peut réécrire le binaire. Enter patche la mémoire. C’est l’outil avec lequel on a « fixé » des COM en attendant un vrai linker.</p></div>
+            <div data-lang="en"><p>Write can rewrite the binary. Enter patches memory. That is the tool people used to “fix” COMs while waiting for a real linker.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>sysver.inc</span></summary>
+          <div class="level-body">
+            <p class="note">Des variantes <code>sysver.tru</code> / <code>.fal</code> : DEBUG ment parfois sur la version (encore SETVER, vu de l’intérieur de l’outil).</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="ems">
+        <h2>EMS</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>debems.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DEBUG sait afficher / allouer de l’EMS (INT 67h). Utile pour tester EMM386 sans écrire un programme.</p></div>
+            <div data-lang="en"><p>DEBUG can display / allocate EMS (INT 67h). Handy to test EMM386 without writing a program.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>XA · XD · XM</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les commandes X* parlent à la page <a href="emm386.html">EMM386</a>. Sans gestionnaire, elles échouent proprement.</p></div>
+            <div data-lang="en"><p>The X* commands talk to the <a href="emm386.html">EMM386</a> page. Without a manager they fail cleanly.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>debcom*.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Découpage historique : COM1 I/O mémoire, COM2 exécution, COM3 disque. Un DEBUG est un petit DOS dans le DOS.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/debug/debug.asm<small>entrée, spec</small></span>
+          <span>cmd/debug/debasm.asm · debuasm.asm<small>assemble / désassemble</small></span>
+          <span>cmd/debug/debems.asm<small>EMS</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">La carte propre des mêmes blocs : <a href="mem.html">MEM</a>.</p>
+    <p data-lang="en">The tidy map of the same blocks: <a href="mem.html">MEM</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

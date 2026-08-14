@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HELP — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="command.html">COMMAND</a>
+      <a href="aide.html" aria-current="page">HELP</a>
+      <a href="filtres.html"><span data-lang="fr">Filtres</span><span data-lang="en">Filters</span></a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#hlp">DOSHELP.HLP</a></li><li><a href="#spawn">/? délégué</a></li><li><a href="#choice">CHOICE absent</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/help — DOS 5.0, MD 3-Oct-90</p>
+        <h1>HELP</h1>
+        <p class="lede" data-lang="fr">Pas un manuel. Un fichier texte <code>DOSHELP.HLP</code> pour la liste d’une ligne, et pour le détail : relancer la commande avec <code>/?</code>. Les éditeurs tiers n’ont qu’à ajouter une ligne au .HLP et implémenter <code>/?</code>.</p>
+        <p class="lede" data-lang="en">Not a manual. A text file <code>DOSHELP.HLP</code> for the one-line list, and for the details: relaunch the command with <code>/?</code>. Third parties only add a line to the .HLP and implement <code>/?</code>.</p>
+      </header>
+
+      <section class="topic" id="hlp">
+        <h2>Un fichier que tout le monde peut étendre</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>@ commentaires</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Chaque ligne : nom en colonne 0, blancs, description. <code>@</code> en première colonne = commentaire. CR-LF, 160 caractères max. HELP sans argument affiche la table. HELP DIR affiche l’entrée puis tente le détail.</p></div>
+            <div data-lang="en"><p>Each line: name in column 0, whitespace, description. <code>@</code> in the first column = comment. CR-LF, 160 characters max. HELP with no argument prints the table. HELP DIR prints the entry then tries for details.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>internes vs externes</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p><code>is_internal()</code> compare à une table en dur — la sœur de COMTAB dans COMMAND :</p>
+              <p><code>BREAK CALL CD CHCP CHDIR CLS COPY CTTY DATE DEL DIR ECHO ERASE EXIT FOR GOTO IF LH LOADHIGH MD MKDIR PATH PAUSE PROMPT RD REM REN RENAME RMDIR SET SHIFT TIME TYPE VER VERIFY VOL</code></p>
+              <p>Un interne n’a pas d’EXE : HELP doit appeler COMMAND.COM <code>/C DIR /?</code>. Un externe : EXEC direct de <code>DIR.COM</code>… qui n’existe pas, donc <code>XCOPY /?</code>.</p>
+            </div>
+            <div data-lang="en">
+              <p><code>is_internal()</code> compares against a hard-coded table — sister of COMTAB in COMMAND. An internal has no EXE: HELP must call COMMAND.COM <code>/C DIR /?</code>. An external: direct EXEC of the utility with <code>/?</code>.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>help.c</span></summary>
+          <div class="level-body">
+            <pre><code>#define  HELP_FILE_NAME     "DOSHELP.HLP"
+#define  COMMENT_MARK       '@'
+#define  MAX_LINE           160
+#define  NO_HELP            3   /* couldn't find help on command */</code></pre>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="spawn">
+        <h2>La hauteur d’écran, encore</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>helper.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même problème que MORE : 25, 43 ou 50 lignes ? D’abord IOCTL ANSI (<code>440Ch</code> / sous-fonction <code>037Fh</code>), sinon <code>40:84h</code>. Commentaire : « Code taken from MORE.COM ». La casse : « Code taken from FIND » — table de majuscules DOS, pas <code>toupper</code> C.</p></div>
+            <div data-lang="en"><p>Same problem as MORE: 25, 43 or 50 lines? First ANSI IOCTL (<code>440Ch</code> / subfunction <code>037Fh</code>), else <code>40:84h</code>. Comment: “Code taken from MORE.COM”. Case: “Code taken from FIND” — DOS uppercase table, not C <code>toupper</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>stdout device ?</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>IOCTL bit <code>DEVICE_BIT</code> (80h) + <code>STDOUT_BIT</code> (02h) : si la sortie est un fichier, pas de pagination. HELP DIR &gt; AIDE.TXT doit rester brut.</p></div>
+            <div data-lang="en"><p>IOCTL bit <code>DEVICE_BIT</code> (80h) + <code>STDOUT_BIT</code> (02h): if output is a file, no paging. HELP DIR &gt; AIDE.TXT must stay raw.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>spawn / process.h</span></summary>
+          <div class="level-body">
+            <p class="note">C + un module ASM. <code>process.h</code> pour EXEC. Retour 2 = I/O, 3 = pas d’aide. Le <code>/?</code> que chaque utilitaire de cette saga a dû ajouter (DOSKEY 1.03, 17-Apr-90, c-PaulB) existe pour ce HELP-là.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="choice">
+        <h2>CHOICE n’est pas dans l’arbre</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>DOS 6, ailleurs</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>CHOICE.COM (pause .BAT, <code>/C:YN</code>, errorlevel) est un classique MS-DOS 6. Dans <em>ce</em> dépôt : pas de <code>cmd/choice/</code>. Les seules occurrences de « choice » sont des invites FDISK ou des menus CONFIG.SYS. On le mentionne pour ne pas faire croire qu’il a été oublié — il n’a simplement pas été livré avec ces sources.</p></div>
+            <div data-lang="en"><p>CHOICE.COM (BAT pause, <code>/C:YN</code>, errorlevel) is a classic MS-DOS 6 extra. In <em>this</em> tree: no <code>cmd/choice/</code>. The only “choice” hits are FDISK prompts or CONFIG.SYS menus. Mentioned so it is not mistaken for an omission — it simply did not ship with these sources.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>PAUSE + IF ERRORLEVEL</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Sans CHOICE, un .BAT fait PAUSE ou une boucle de FIND. COMMAND a déjà IF ERRORLEVEL — c’est le contrat que FIND, XCOPY, BACKUP, TREE honorent.</p></div>
+            <div data-lang="en"><p>Without CHOICE, a BAT uses PAUSE or a FIND loop. COMMAND already has IF ERRORLEVEL — the contract FIND, XCOPY, BACKUP, TREE honour.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>QBasic aussi dehors</span></summary>
+          <div class="level-body">
+            <p class="note"><code>cmd/qbasic/</code> est un autre produit (binaires + .HLP). Même décision : pas un chapitre OS. HELP, lui, est bien un utilitaire DOS 5 du noyau « comment s’en servir ».</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/help/help.c<small>DOSHELP.HLP, name_table, spawn /?</small></span>
+          <span>cmd/help/helper.asm<small>hauteur MORE, casse FIND</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Rustines de chargement et de BIOS : <a href="loadfix.html">LOADFIX · EXE2BIN · PRINTFIX · WINA20</a>.</p>
+    <p data-lang="en">Load and BIOS patches: <a href="loadfix.html">LOADFIX · EXE2BIN · PRINTFIX · WINA20</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SHARE — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      <a href="share.html" aria-current="page">SHARE</a>
+      <a href="int21.html">INT 21h</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#jshare">JShare</a></li><li><a href="#deny">Deny read / write</a></li><li><a href="#lock">$LockOper</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/share/ · dos/share.asm · dos/lock.asm</p>
+        <h1>SHARE</h1>
+        <p class="lede" data-lang="fr">DOS seul ne sait pas que deux programmes tiennent le même fichier. SHARE s’installe et remplit la table <code>JShare</code> : fusionner les SFT, refuser un second open, poser des verrous d’octets. Sans lui, les modes <code>SHARING_*</code> de <a href="fichiers.html#open">OPEN</a> sont des vœux.</p>
+        <p class="lede" data-lang="en">DOS alone does not know two programs hold the same file. SHARE installs and fills the <code>JShare</code> table: collapse SFTs, refuse a second open, set byte locks. Without it, the <code>SHARING_*</code> modes on <a href="fichiers.html#open">OPEN</a> are wishes.</p>
+      </header>
+      <section class="topic" id="jshare">
+        <h2>Une table de far calls</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le noyau appelle dans le vide… sauf si SHARE est là</span>
+            <span data-lang="en">The kernel calls into the void… unless SHARE is there</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les stubs de <code>dos/share.asm</code> / <code>lock.asm</code> rendent « pas d’erreur » tant que SHARE n’est pas chargé. Une fois lancé, il patch <code>JShare</code>. <code>$Open</code> appelle <code>JShare + 12*4</code> (ShCol) pour collapser deux SFT identiques.</p></div>
+            <div data-lang="en"><p>Stubs in <code>dos/share.asm</code> / <code>lock.asm</code> return “no error” until SHARE is loaded. Once running, it patches <code>JShare</code>. <code>$Open</code> calls <code>JShare + 12*4</code> (ShCol) to collapse two identical SFTs.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>gshare.asm · M003</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Bug #2425 : ne pas chaîner une SFT à elle-même. <code>sf_UID</code> / <code>sf_PID</code> / <code>sf_MFT</code> identifient le fichier ouvert. M001 retire le switch /NC (« skip_check »).</p></div>
+            <div data-lang="en"><p>Bug #2425: do not chain an SFT to itself. <code>sf_UID</code> / <code>sf_PID</code> / <code>sf_MFT</code> identify the open file. M001 removes the /NC switch (“skip_check”).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>Installed = True</span></summary>
+          <div class="level-body">
+            <p class="note">Le noyau se compile avec <code>Installed = True</code> : les appels passent par INT 2Fh multiplex plutôt que d’être liés en dur. SHARE.EXE est un TSR comme un autre.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="deny">
+        <h2>Compatibility vs deny-*</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Le mode 70h des FCB réseau</span>
+            <span data-lang="en">Network FCB mode 70h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Compatibility (DOS 2) : « je suis tout seul ». Deny-write : les autres peuvent lire. <code>SHARING_NET_FCB</code> (70h) : cas spécial déjà vu à la fermeture du JFN.</p></div>
+            <div data-lang="en"><p>Compatibility (DOS 2): “I am alone”. Deny-write: others may read. <code>SHARING_NET_FCB</code> (70h): special case already seen when freeing the JFN.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>sharing_violation</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>DOS_Open</code> / <code>SHARE_ERROR</code> : en compatibility, INT 24 ; sinon erreur 32. Un second WRITER sur un deny-write échoue ici, pas dans FAT.</p></div>
+            <div data-lang="en"><p><code>DOS_Open</code> / <code>SHARE_ERROR</code>: in compatibility, INT 24; otherwise error 32. A second WRITER on deny-write fails here, not in FAT.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>sf_chain</span></summary>
+          <div class="level-body">
+            <p class="note">Les SFT du même fichier sont liées par <code>sf_chain</code>. C’est cette liste que ShCol parcourt au lieu d’en allouer une nouvelle.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="lock">
+        <h2>Verrous</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>AH=5Ch</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Même fichier ouvert deux fois : on peut verrouiller une plage d’octets. Sans SHARE, <code>$LockOper</code> est un stub. Windows et les bases DOS s’en servent.</p></div>
+            <div data-lang="en"><p>Same file opened twice: you can lock a byte range. Without SHARE, <code>$LockOper</code> is a stub. Windows and DOS databases use it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>lock.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>DOS_LOCK</code> / <code>Lock_Check</code> / <code>Lock_Violation</code>. <code>dispatch.txt</code> les classe « STUB MODULES ». L’erreur 33 = lock violation.</p></div>
+            <div data-lang="en"><p><code>DOS_LOCK</code> / <code>Lock_Check</code> / <code>Lock_Violation</code>. <code>dispatch.txt</code> files them under “STUB MODULES”. Error 33 = lock violation.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>critNet</span></summary>
+          <div class="level-body">
+            <p class="note">Section critique 5 dans dispatch.txt. Sur un PC mono-tâche local, SHARE sert surtout Windows / redir. En réseau, le redir a sa propre copie des règles.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/share/gshare.asm<small>TSR, ShCol, chaînes SFT</small></span>
+          <span>dos/share.asm · lock.asm<small>stubs noyau</small></span>
+          <span>inc/filemode.inc<small>SHARING_*</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">PRINT, autre TSR historique, vit sur INT 28 — et partage AuxStack avec INT 24.</p>
+    <p data-lang="en">PRINT, another historic TSR, lives on INT 28 — and shares AuxStack with INT 24.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INT 13 — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="int13.html" aria-current="page">INT 13</a>
+      <a href="smartdrv.html">SMARTDRV</a>
+      <a href="boot.html">Boot</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#bds">BDS</a></li><li><a href="#orig">call_orig13</a></li><li><a href="#win">Windows</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">bios/msint13.asm · bios/msdisk.asm</p>
+        <h1>INT 13h</h1>
+        <p class="lede" data-lang="fr">Sous la FAT, sous les tampons DOS, sous SMARTDRV : le BIOS disque. IO.SYS l’enveloppe — media check, BPB, retries — puis appelle l’INT 13h d’origine. <code>FIGREC</code> produit un secteur ; INT 13h le lit en CHS.</p>
+        <p class="lede" data-lang="en">Under FAT, under DOS buffers, under SMARTDRV: the disk BIOS. IO.SYS wraps it — media check, BPB, retries — then calls the original INT 13h. <code>FIGREC</code> yields a sector; INT 13h reads it in CHS.</p>
+      </header>
+      <section class="topic" id="bds">
+        <h2>BDS</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">La fiche « physique » du lecteur</span>
+            <span data-lang="en">The drive’s “physical” card</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le DPB est l’affaire de DOS (FAT). Le <strong>BDS</strong> (BIOS Data Structure, <code>msbds.inc</code>) est l’affaire d’IO.SYS : têtes, secteurs/piste, dernier média, pointeur de BPB. Beaucoup de routines gardent ES:DI sur le BDS courant — « standard operating environment ».</p></div>
+            <div data-lang="en"><p>The DPB is DOS’s affair (FAT). The <strong>BDS</strong> (BIOS Data Structure, <code>msbds.inc</code>) is IO.SYS’s: heads, sectors/track, last media, BPB pointer. Many routines keep ES:DI on the current BDS — “standard operating environment”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>msdisk.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>C’est ici que naît le BPB quand le boot n’en a pas (disquette exotique). Media descriptor, changement de disque : <code>FATREAD_CDS</code> interroge ce niveau.</p></div>
+            <div data-lang="en"><p>This is where a BPB is born when the boot has none (odd floppy). Media descriptor, disk change: <code>FATREAD_CDS</code> asks this layer.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>HIDDENSECTORS</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Les secteurs cachés du BPB (partition) se traduisent ici en CHS + numéro de lecteur BIOS (80h = premier dur). FDISK a écrit ces nombres ; FORMAT les a copiés dans le boot.</p>
+            <p class="note" data-lang="en">The BPB’s hidden sectors (partition) become CHS + BIOS unit (80h = first hard disk) here. FDISK wrote those numbers; FORMAT copied them into the boot.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="orig">
+        <h2>call_orig13</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Ne pas se rappeler soi-même</span>
+            <span data-lang="en">Do not call yourself</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>IO.SYS a pris INT 13h. Pour parler au vrai BIOS, il faut l’ancien vecteur : <code>call_orig13</code> (M030). SMARTDRV fait la même chose un étage plus haut.</p></div>
+            <div data-lang="en"><p>IO.SYS took INT 13h. To talk to the real BIOS you need the old vector: <code>call_orig13</code> (M030). SMARTDRV does the same one level up.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Retries · reset</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Erreur disque : reset contrôleur, réessayer, puis INT 24. Les disquettes ont plus de retries que le dur. C’est ici que « Abort, Retry » naît vraiment.</p></div>
+            <div data-lang="en"><p>Disk error: reset the controller, retry, then INT 24. Floppies get more retries than the hard disk. This is where “Abort, Retry” is really born.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>RPL M056</span></summary>
+          <div class="level-body">
+            <p class="note">Le chargeur réseau (RPL) installe un faux INT 13. SYSINIT et le transient de COMMAND ne doivent pas l’écraser — déjà noté dans msload / sysinit.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="win">
+        <h2>Windows · HMA</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>win386.inc</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Windows 386 veut connaître les lecteurs et parfois reloger des buffers. <code>msint13.asm</code> inclut <code>win386.inc</code> et parle aussi à la HMA (<code>multMULTGETHMAPTR</code>).</p></div>
+            <div data-lang="en"><p>Windows 386 wants to know the drives and sometimes relocate buffers. <code>msint13.asm</code> includes <code>win386.inc</code> and also talks to the HMA (<code>multMULTGETHMAPTR</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>INT 2Fh 4Ah</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Multiplex 4Ah : pointeur HMA, allocation HMA — le même monde que HIMEM, vu depuis le BIOS DOS.</p></div>
+            <div data-lang="en"><p>Multiplex 4Ah: HMA pointer, HMA allocation — the same world as HIMEM, seen from the DOS BIOS.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>CHS 1024</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">INT 13h classique : 10 bits de cylindre → 1024. Au-delà, le BIOS « étend » ou ment. DOS 6 n’a pas INT 13h extensions. Les gros disques passent par la géométrie traduite dans le BDS / les hidden sectors.</p>
+            <p class="note" data-lang="en">Classic INT 13h: 10 bits of cylinder → 1024. Beyond that the BIOS “extends” or lies. DOS 6 has no INT 13h extensions. Large disks go through geometry translated in the BDS / hidden sectors.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>bios/msint13.asm<small>enveloppe INT 13, Windows, HMA</small></span>
+          <span>bios/msdisk.asm<small>I/O, media, BPB</small></span>
+          <span>inc/msbds.inc<small>BDS</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Dernier article de la fournée : SETVER, le mensonge officiel sur le numéro de version.</p>
+    <p data-lang="en">Last article of the batch: SETVER, the official lie about the version number.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

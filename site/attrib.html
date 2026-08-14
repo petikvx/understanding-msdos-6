@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATTRIB · LABEL · TREE · SYS — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="fat.html">FAT</a>
+      <a href="attrib.html" aria-current="page">ATTRIB</a>
+      <a href="format.html">FORMAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#attrib">ATTRIB</a></li><li><a href="#label">LABEL</a></li><li><a href="#tree">TREE</a></li><li><a href="#sys">SYS</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/attrib · label · tree · sys</p>
+        <h1>ATTRIB · LABEL · TREE · SYS</h1>
+        <p class="lede" data-lang="fr">Quatre petits outils qui parlent au répertoire et au secteur 0. Attributs R/S/H/A, nom de volume, dessin de l’arbre, copie d’IO.SYS/MSDOS.SYS/COMMAND.COM aux bons clusters.</p>
+        <p class="lede" data-lang="en">Four small tools that talk to the directory and to sector 0. R/S/H/A attributes, volume label, a drawing of the tree, copy of IO.SYS/MSDOS.SYS/COMMAND.COM onto the right clusters.</p>
+      </header>
+
+      <section class="topic" id="attrib">
+        <h2>ATTRIB +R -H /S</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>le 12<sup>e</sup> octet</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Chaque entrée répertoire a un octet d’attributs (page FAT). ATTRIB est le tournevis : <code>+R</code> lecture seule, <code>+H</code> caché, <code>+S</code> système, <code>+A</code> archive. <code>/S</code> descend. Sans signe : affiche l’état.</p></div>
+            <div data-lang="en"><p>Each directory entry has an attribute byte (FAT page). ATTRIB is the screwdriver: <code>+R</code> read-only, <code>+H</code> hidden, <code>+S</code> system, <code>+A</code> archive. <code>/S</code> descends. No sign: print the state.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>ancienne syntaxe EA</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>L’en-tête de <code>attrib.c</code> montre deux syntaxes. L’ancienne (DOS 4) acceptait des attributs étendus <code>[id]|[id=value]</code>. La nouvelle : <code>{+,-}{R,S,A,H}</code> seulement. Les EA OS/2 n’ont pas survécu dans l’usage DOS 6, le code de message est encore là.</p></div>
+            <div data-lang="en"><p>The header of <code>attrib.c</code> shows two syntaxes. The old one (DOS 4) accepted extended attributes <code>[id]|[id=value]</code>. The new one: <code>{+,-}{R,S,A,H}</code> only. OS/2 EAs did not survive in DOS 6 use; the message code is still there.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>AH=43h</span></summary>
+          <div class="level-body">
+            <p class="note">INT 21h AH=43h (chmod) — pas d’écriture directe de l’entrée. SHARE et le bit read-only du SFT restent cohérents. XCOPY <code>/M</code> et BACKUP <code>/M</code> consomment le même bit A.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="label">
+        <h2>LABEL</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>11 caractères, entrée 08h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le nom de volume est une entrée répertoire d’attribut Volume (08h), plus une copie dans le BPB étendu. LABEL sans argument affiche, demande, détruit l’ancienne, crée la nouvelle. VOL (interne COMMAND) ne fait que lire.</p></div>
+            <div data-lang="en"><p>The volume name is a directory entry with the Volume attribute (08h), plus a copy in the extended BPB. LABEL with no argument displays, prompts, deletes the old one, creates the new. VOL (COMMAND internal) only reads.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>Ctrl-C et atexit</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>label.c</code> pose INT 23h et <code>atexit(ExitLabel)</code> : si on casse au milieu, on ne laisse pas deux labels. Vérifie la version DOS comme presque tous les utilitaires C de cette génération.</p></div>
+            <div data-lang="en"><p><code>label.c</code> installs INT 23h and <code>atexit(ExitLabel)</code>: if you break in the middle, you do not leave two labels. Checks the DOS version like almost every C utility of that generation.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>FORMAT aussi</span></summary>
+          <div class="level-body">
+            <p class="note"><code>cmd/format/forlabel.asm</code> écrit le même type d’entrée après un format. Deux chemins, une structure — page FORMAT.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="tree">
+        <h2>TREE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>/F /A</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Dessine l’arbre à partir d’un dossier (racine par défaut). <code>/F</code> liste aussi les fichiers. <code>/A</code> : ASCII <code>+--</code> au lieu des caractères graphiques OEM (qui exigent GRAFTABL en mode graphique CGA).</p></div>
+            <div data-lang="en"><p>Draws the tree from a folder (root by default). <code>/F</code> also lists files. <code>/A</code>: ASCII <code>+--</code> instead of OEM graphic characters (which need GRAFTABL in CGA graphics mode).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>errorlevel 0/1/2/3</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>0 ok, 1 I/O, 2 mauvaise version DOS, 3 Ctrl-Break. Ne change ni le drive courant ni le répertoire — FindFirst attribut directory, puis récursion.</p></div>
+            <div data-lang="en"><p>0 ok, 1 I/O, 2 bad DOS version, 3 Ctrl-Break. Changes neither current drive nor directory — FindFirst with directory attribute, then recursion.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>tree.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Assembleur, stdout seulement. Les glyphes <code>├──</code> / <code>└──</code> sont des octets CP437 ; redirigés dans un fichier ils dépendent de la page de codes du TYPE ultérieur (page NLS).</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sys">
+        <h2>SYS C:</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>rendre un disque bootable</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>FORMAT /S le fait à la naissance. SYS le fait après coup : copie IO.SYS, MSDOS.SYS, COMMAND.COM, réécrit le secteur boot. Les deux premiers doivent occuper les premiers clusters contigus — le chargeur à <code>7C00h</code> ne sait pas encore marcher une FAT fragmentée (page Boot).</p></div>
+            <div data-lang="en"><p>FORMAT /S does it at birth. SYS does it afterwards: copies IO.SYS, MSDOS.SYS, COMMAND.COM, rewrites the boot sector. The first two must occupy the first contiguous clusters — the loader at <code>7C00h</code> cannot yet walk a fragmented FAT (Boot page).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>déménager un cluster</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Si les premiers clusters sont pris, SYS les libère : lit l’entrée, trouve un trou, déplace le cluster, met à jour FAT et répertoire. C06 (29-Mar-90) : le buffer des fichiers système était écrasé quand le cluster à bouger dépassait 4 Ko. M005–M008 : gros numéros de clusters, test EOF, flush FAT #2 qui écrasait la racine, CDS à jour après déplacement d’un sous-répertoire.</p></div>
+            <div data-lang="en"><p>If the first clusters are taken, SYS frees them: read the entry, find a hole, move the cluster, update FAT and directory. C06 (29-Mar-90): the system-file buffer was overwritten when the cluster to move was larger than 4 KB. M005–M008: large cluster numbers, EOF test, FAT #2 flush that overwrote the root, CDS updated after moving a subdirectory.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>sys2.asm · UNPACK/PACK</span></summary>
+          <div class="level-body">
+            <pre><code>; sys2.asm — same vocabulary as the kernel
+; Read_Directory → Find_DPB
+; Free_Cluster   → Is_It_Empty → Unpack
+; Search_FAT     → Unpack / Pack
+; Move_DIR_Entry → Find_Empty_Entry → Direct_Access
+; M008: Update CDS following move of subdirectory</code></pre>
+            <p class="note" data-lang="fr">SYS réimplémente une mini-FAT (comme CHKDSK et RECOVER) au lieu d’appeler ALLOCATE. Il doit garantir la contiguïté, ce que le noyau ne promet pas.</p>
+            <p class="note" data-lang="en">SYS reimplements a mini-FAT (like CHKDSK and RECOVER) instead of calling ALLOCATE. It must guarantee contiguity, which the kernel does not promise.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/attrib/attrib.c<small>+R +S +H +A, ancienne syntaxe EA</small></span>
+          <span>cmd/label/label.c<small>INT 23, atexit, entrée 08h</small></span>
+          <span>cmd/tree/tree.asm<small>/F /A, errorlevels</small></span>
+          <span>cmd/sys/sys2.asm<small>C06, M005–M008, UNPACK/PACK</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Imprimer l’écran graphique : <a href="graph.html">GRAPHICS · GRAFTABL</a>.</p>
+    <p data-lang="en">Print the graphics screen: <a href="graph.html">GRAPHICS · GRAFTABL</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

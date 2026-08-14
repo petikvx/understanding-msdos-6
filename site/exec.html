@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Processus — Comprendre MS-DOS 6 / Processes — Understanding MS-DOS 6</title>
+  <meta name="description" content="EXEC, PSP, EXIT, TSR : comment MS-DOS 6 charge FOO.COM, lui donne un PSP et le rend au père.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html" aria-current="page">EXEC</a>
+        <a href="command.html">COMMAND</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title"><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#exec"><span data-lang="fr">La machine</span><span data-lang="en">The machine</span></a></li>
+        <li><a href="#exec-fn">$EXEC</a></li>
+        <li><a href="#com-exe">COM · EXE</a></li>
+        <li><a href="#psp">PSP</a></li>
+        <li><a href="#exit">$EXIT · $WAIT</a></li>
+        <li><a href="#tsr">TSR</a></li>
+        <li><a href="#sources"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · dos/msproc.asm · inc/pdb.inc · inc/exe.inc</p>
+        <h1>
+          <span data-lang="fr">Processus</span>
+          <span data-lang="en">Processes</span>
+        </h1>
+        <p class="lede" data-lang="fr">
+          FAT, handles, arènes, INT 21h : tout ça pour lancer
+          <code>FOO.COM</code>. Cette page suit <code>$EXEC</code>
+          (AH=4Bh) jusqu’au <code>$EXIT</code> (AH=4Ch) — PSP, héritage
+          des tickets, signature « MZ », et le père qui récupère le code
+          de retour avec <code>$WAIT</code>.
+        </p>
+        <p class="lede" data-lang="en">
+          FAT, handles, arenas, INT 21h: all of that so you can launch
+          <code>FOO.COM</code>. This page follows <code>$EXEC</code>
+          (AH=4Bh) through to <code>$EXIT</code> (AH=4Ch) — PSP, ticket
+          inheritance, the “MZ” signature, and the parent collecting the
+          exit code with <code>$WAIT</code>.
+        </p>
+      </header>
+
+      <section class="machine" id="exec" aria-labelledby="exec-title">
+        <div class="machine__bar">
+          <h2 id="exec-title">
+            <span data-lang="fr">Charger FOO.COM</span>
+            <span data-lang="en">Load FOO.COM</span>
+          </h2>
+          <div class="machine__ctrl">
+            <button type="button" data-exec="prev">←</button>
+            <button type="button" data-exec="play"><span data-lang="fr">Lecture</span><span data-lang="en">Play</span></button>
+            <button type="button" data-exec="next">→</button>
+            <button type="button" data-exec="reset"><span data-lang="fr">Début</span><span data-lang="en">Start</span></button>
+          </div>
+        </div>
+        <ol class="machine__dots" data-dots></ol>
+        <div class="machine__stage">
+          <div class="panel">
+            <h3>arena_head</h3>
+            <div class="arena-row" data-arena></div>
+          </div>
+          <div class="panel">
+            <h3>PSP</h3>
+            <dl class="sft-card" data-psp></dl>
+          </div>
+          <div class="panel" style="grid-column:1/-1">
+            <h3>AX BX CX DX</h3>
+            <div class="regs" data-regs></div>
+          </div>
+        </div>
+        <p class="machine__say" data-say></p>
+      </section>
+
+      <section class="topic" id="exec-fn">
+        <h2>$EXEC · AH=4Bh</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Quatre façons de « lancer »</span>
+            <span data-lang="en">Four ways to “launch”</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                COMMAND.COM ne saute pas dans FOO tout seul : il appelle
+                DOS avec un nom de fichier et un petit bloc d’arguments
+                (ligne de commande, environnement, deux FCB). DOS ouvre
+                le fichier, réserve de la RAM, construit un PSP, et —
+                selon AL — démarre le programme, ou le laisse en mémoire
+                sans l’exécuter.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                COMMAND.COM does not jump into FOO by itself: it calls
+                DOS with a file name and a small argument block (command
+                tail, environment, two FCBs). DOS opens the file,
+                reserves RAM, builds a PSP, and — depending on AL —
+                starts the program, or leaves it in memory without
+                running it.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>AL = 0, 1, 3, 5 — pas 2 ni 4</span>
+          </summary>
+          <div class="level-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>AL</th>
+                    <th data-lang="fr">Rôle</th>
+                    <th data-lang="en">Role</th>
+                    <th>Bloc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>00</code></td>
+                    <td data-lang="fr">Charger et exécuter</td>
+                    <td data-lang="en">Load and execute</td>
+                    <td><code>EXEC0</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>01</code></td>
+                    <td data-lang="fr">Charger, créer le PSP, ne pas partir</td>
+                    <td data-lang="en">Load, create PSP, do not run</td>
+                    <td><code>EXEC1</code> + CS:IP / SS:SP rendus</td>
+                  </tr>
+                  <tr>
+                    <td><code>02</code> / <code>04</code></td>
+                    <td data-lang="fr">Refusés (<code>error_invalid_function</code>)</td>
+                    <td data-lang="en">Rejected</td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td><code>03</code></td>
+                    <td data-lang="fr">Overlay : pas de PSP, pas d’environnement</td>
+                    <td data-lang="en">Overlay: no PSP, no environment</td>
+                    <td><code>EXEC3</code> adresse + facteur de reloc</td>
+                  </tr>
+                  <tr>
+                    <td><code>05</code></td>
+                    <td>ExecReady</td>
+                    <td>ExecReady</td>
+                    <td>retour détourné vers <code>LeaveDos</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>Exec_Check_2 · EXECOPEN</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/msproc.asm — $Exec</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>mov  [A20OFF_COUNT], 0
+cmp  al, 5
+jne  @f
+pop  cx
+mov  cx, offset LeaveDos
+push cx</pre>
+                <p data-lang="fr">ExecReady (4B05h) change l’adresse de retour pour que le bit EXECA20OFF survive au dispatcher. Voir <a href="int21.html#sortie">LeaveDos</a>.</p>
+                <p data-lang="en">ExecReady (4B05h) rewrites the return address so EXECA20OFF survives the dispatcher. See <a href="int21.html#sortie">LeaveDos</a>.</p>
+              </div>
+              <div class="anno__row">
+                <pre>or   [DOS_FLAG], EXECOPEN
+invoke $OPEN
+and  [DOS_FLAG], not EXECOPEN
+test DL, DEVID_ISDEV
+jnz  error_file_not_found</pre>
+                <p data-lang="fr">On réutilise <a href="fichiers.html#open">$OPEN</a>. Un device nommé FOO n’est pas un programme. EXECOPEN prévient le redir / EXEC depuis EXEC.</p>
+                <p data-lang="en">Reuse <a href="fichiers.html#open">$OPEN</a>. A device named FOO is not a program. EXECOPEN tells the redirector this open is from EXEC.</p>
+              </div>
+              <div class="anno__row">
+                <pre>rep  movsb          ; environnement
+mov  AX, 1
+stosw
+rep  movsb          ; chemin du .COM</pre>
+                <p data-lang="fr">Après les chaînes <code>KEY=val\0</code>, un mot 0001h puis le nom. Environnement vide (0) → on copie celui du père (<code>PDB_environ</code>). Plafond relevé à 32768 octets (M040).</p>
+                <p data-lang="en">After the <code>KEY=val\0</code> strings, a 0001h word then the name. Empty environment (0) → copy the parent’s (<code>PDB_environ</code>). Cap raised to 32768 bytes (M040).</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="com-exe">
+        <h2>COM · EXE</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Deux enveloppes, un même PSP</span>
+            <span data-lang="en">Two wrappers, one PSP</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un <strong>.COM</strong> est une image nue : DOS la pose
+                à l’offset 100h d’un segment, et le programme occupe
+                (presque) tout le bloc. Un <strong>.EXE</strong> a un
+                en-tête « MZ », plusieurs segments, une table de
+                relogement, et dit combien de RAM « BSS » il veut en
+                plus. Dans les deux cas, le PSP est collé juste devant.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A <strong>.COM</strong> is a naked image: DOS places it
+                at offset 100h of a segment, and the program occupies
+                (almost) the whole block. An <strong>.EXE</strong> has
+                an “MZ” header, several segments, a relocation table,
+                and says how much extra “BSS” RAM it wants. In both
+                cases the PSP is glued on in front.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>5A4Dh · zibo arises!</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                On lit d’abord un en-tête de taille fixe. Trop court →
+                COM. Sinon on compare à <code>EXE_VALID_SIGNATURE</code>
+                = <code>5A4Dh</code> (« MZ » en petit-boutiste) <em>et</em>
+                à l’ancienne <code>4D5Ah</code> (« ZM »). Commentaire :
+                <em>yay zibo!</em> / <em>zibo arises!</em> — Mark
+                Zbikowski. <code>exec_max_BSS = 0</code> demande un
+                chargement « high » dans le bloc.
+              </p>
+              <p>
+                Pour un COM : <code>$ALLOC</code> avec BX=FFFFh (plus
+                grand bloc possible), PSP de 10h paragraphes, lecture
+                depuis le début du fichier (pas depuis l’offset 100h du
+                fichier : le 100h est dans le <em>segment</em>). Pile au
+                sommet ; si le bloc &lt; 64 Ko on réserve encore 256
+                octets (M047). CS=DS=ES=SS=PSP, IP=100h.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A fixed-size header is read first. Too short → COM.
+                Otherwise compare with <code>EXE_VALID_SIGNATURE</code>
+                = <code>5A4Dh</code> (“MZ” little-endian) <em>and</em>
+                the old <code>4D5Ah</code> (“ZM”). Comment:
+                <em>yay zibo!</em> / <em>zibo arises!</em> — Mark
+                Zbikowski. <code>exec_max_BSS = 0</code> requests a
+                “high” load inside the block.
+              </p>
+              <p>
+                For a COM: <code>$ALLOC</code> with BX=FFFFh (largest
+                possible block), 10h-paragraph PSP, read from the start
+                of the file (not from file offset 100h: the 100h is in
+                the <em>segment</em>). Stack at the top; if the block is
+                &lt; 64 KB another 256 bytes are reserved (M047).
+                CS=DS=ES=SS=PSP, IP=100h.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>EXE_FILE · reloc · M005/M029</span>
+          </summary>
+          <div class="level-body">
+            <figure class="illust">
+              <p class="illust__cap"><code>inc/exe.inc</code> — EXE_FILE</p>
+              <div class="map2">
+                <span class="hd">Champ</span><span></span><span class="hd" data-lang="fr">Rôle</span><span class="hd" data-lang="en">Role</span>
+                <span>EXE_SIGNATURE</span><span class="to">→</span><span>5A4Dh ou 4D5Ah</span>
+                <span>EXE_PAGES / LEN_MOD_512</span><span class="to">→</span><span>taille image</span>
+                <span>EXE_PAR_DIR</span><span class="to">→</span><span data-lang="fr">paragraphes avant l’image</span><span data-lang="en">paragraphs before the image</span>
+                <span>EXE_MIN/MAX_BSS</span><span class="to">→</span><span>RAM extra</span>
+                <span>EXE_CS:IP · SS:SP</span><span class="to">→</span><span data-lang="fr">relatifs, + facteur</span><span data-lang="en">relative, + factor</span>
+                <span>EXE_RLE_TABLE / COUNT</span><span class="to">→</span><span data-lang="fr">correctifs far</span><span data-lang="en">far fixups</span>
+              </div>
+            </figure>
+            <p class="note" data-lang="fr">
+              EXE sans segment pile : si le bloc ≥ 64 Ko, SP=0 ; sinon SP
+              en fin de bloc. On ajoute encore 256 octets pour les petits
+              EXE bas (M005, réécrit M029). Overlay (AL=3) : pas de PSP,
+              facteur de reloc fourni par l’appelant — c’est ainsi que
+              SYSINIT charge les pilotes.
+            </p>
+            <p class="note" data-lang="en">
+              EXE with no stack segment: if the block is ≥ 64 KB, SP=0;
+              otherwise SP at the end of the block. Another 256 bytes
+              are added for small low EXEs (M005, rewritten M029).
+              Overlay (AL=3): no PSP, reloc factor supplied by the
+              caller — that is how SYSINIT loads drivers.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="psp">
+        <h2>PSP · CreatePDB</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">256 octets qui sont « vous »</span>
+            <span data-lang="en">256 bytes that are “you”</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le <strong>PSP</strong> (Process data block) est la carte
+                d’identité du programme : ses 20 handles, son
+                environnement, la ligne tapée après le nom, l’adresse où
+                revenir quand il meurt, et les deux FCB par défaut.
+                <code>CurrentPDB</code> désigne le PSP actif — c’est
+                l’<em>owner</em> des arènes et le point de départ de
+                chaque handle.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The <strong>PSP</strong> (Process data block) is the
+                program’s identity card: its 20 handles, its
+                environment, the text typed after the name, the address
+                to return to when it dies, and the two default FCBs.
+                <code>CurrentPDB</code> names the active PSP — it is the
+                <em>owner</em> of arenas and the starting point of every
+                handle.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">On copie, puis on DUP</span>
+            <span data-lang="en">Copy, then DUP</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>$CREATE_PROCESS_DATA_BLOCK</code> copie d’abord
+                256 octets (80h mots) du père, puis reprend la table JFN
+                depuis <code>PDB_JFN_Pointer</code> (au cas où
+                <code>$ExtHandle</code> l’a déplacée). Pour chaque
+                handle : si la SFT existe et n’a pas
+                <code>sf_no_inherit</code> ni le mode FCB réseau, on
+                <code>DOS_DUP</code> (incrémente
+                <code>sf_ref_count</code>). Puis
+                <code>PDB_Parent_PID = père</code>,
+                <code>CurrentPDB = fils</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>$CREATE_PROCESS_DATA_BLOCK</code> first copies 256
+                bytes (80h words) from the parent, then copies the JFN
+                table from <code>PDB_JFN_Pointer</code> (in case
+                <code>$ExtHandle</code> moved it). For each handle: if
+                the SFT exists and has neither <code>sf_no_inherit</code>
+                nor net-FCB mode, <code>DOS_DUP</code> (increment
+                <code>sf_ref_count</code>). Then
+                <code>PDB_Parent_PID = parent</code>,
+                <code>CurrentPDB = child</code>.
+              </p>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap"><code>inc/pdb.inc</code> — extraits</p>
+              <div class="layout-bytes">
+                <span style="--w:2"><b>INT 20</b><i>00</i></span>
+                <span style="--w:2"><b>mem</b><i>02</i></span>
+                <span class="hi" style="--w:4"><b>CALL 5</b><i>05</i></span>
+                <span class="hi" style="--w:4"><b>INT 22</b><i>0A</i></span>
+                <span style="--w:4"><b>INT 23</b><i>0E</i></span>
+                <span class="hi" style="--w:2"><b>parent</b><i>16</i></span>
+                <span class="hi" style="--w:8"><b>JFN ×20</b><i>18</i></span>
+              </div>
+              <p class="note">
+                <span data-lang="fr">Offset 0Ah = <code>SavExit</code> : les trois vecteurs 22/23/24 que <code>$ABORT</code> restaurera. 80h = queue de commande (<code>PDB_TAIL</code>).</span>
+                <span data-lang="en">Offset 0Ah = <code>SavExit</code>: the three 22/23/24 vectors <code>$ABORT</code> will restore. 80h = command tail (<code>PDB_TAIL</code>).</span>
+              </p>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>Create_dup_jfn</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/misc.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>MOV  CX, 80h
+REP  MOVSW              ; 256 octets
+LDS  SI, PDB_JFN_Pointer
+MOV  CX, FilPerProc
+REP  MOVSB              ; 20 JFN</pre>
+                <p data-lang="fr">Deux copies : le PSP « documenté » puis la table éventuellement déplacée.</p>
+                <p data-lang="en">Two copies: the “documented” PSP, then the possibly relocated table.</p>
+              </div>
+              <div class="anno__row">
+                <pre>invoke SFFromHandle
+TESTB sf_flags, sf_no_inherit
+JNZ   CreateStash       ; AL = FFh
+invoke DOS_DUP</pre>
+                <p data-lang="fr">Même bit que <a href="fichiers.html#open">OPEN 80h</a>. Le fils n’hérite pas de ce fichier-là.</p>
+                <p data-lang="en">Same bit as <a href="fichiers.html#open">OPEN 80h</a>. The child does not inherit that file.</p>
+              </div>
+              <div class="anno__row">
+                <pre>MOV  ES:[PDB_Parent_PID], CurrentPDB
+MOV  [CurrentPDB], ES</pre>
+                <p data-lang="fr">À partir d’ici, chaque <a href="memoire.html#owner">$ALLOC</a> appartient au fils.</p>
+                <p data-lang="en">From here on, every <a href="memoire.html#owner">$ALLOC</a> belongs to the child.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="exit">
+        <h2>$EXIT · $ABORT · $WAIT</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Rendre la place, prévenir le père</span>
+            <span data-lang="en">Give the space back, tell the parent</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>AH=4Ch</code> : le programme dit « j’ai fini, voici
+                AL ». DOS ferme ce qu’il faut, rend la RAM, remet les
+                vecteurs 22/23/24 comme au lancement, et rend la main au
+                père. Celui-ci fait souvent <code>AH=4Dh</code>
+                (<code>$WAIT</code>) pour lire le code.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>AH=4Ch</code>: the program says “I am done, here is
+                AL”. DOS closes what it must, gives RAM back, restores
+                vectors 22/23/24 as at launch, and returns to the
+                parent. The parent often issues <code>AH=4Dh</code>
+                (<code>$WAIT</code>) to read the code.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>Exit_Type dans AH</span>
+          </summary>
+          <div class="level-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>AH (type)</th>
+                    <th>Constante</th>
+                    <th data-lang="fr">Cause</th>
+                    <th data-lang="en">Cause</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>00</code></td><td><code>EXIT_TERMINATE</code></td><td>4Ch / 00h normal</td><td>normal 4Ch / 00h</td></tr>
+                  <tr><td><code>01</code></td><td><code>EXIT_CTRL_C</code></td><td>DidCtrlC ≠ 0</td><td>DidCtrlC ≠ 0</td></tr>
+                  <tr><td><code>02</code></td><td><code>EXIT_HARD_ERROR</code></td><td>INT 24 fatal</td><td>fatal INT 24</td></tr>
+                  <tr><td><code>03</code></td><td><code>EXIT_KEEP_PROCESS</code></td><td>TSR AH=31h</td><td>TSR AH=31h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p data-lang="fr">
+              <code>$WAIT</code> fait <code>XCHG AX, exit_code</code> :
+              un seul code en attente, lu une fois. AL = code du
+              programme, AH = type.
+            </p>
+            <p data-lang="en">
+              <code>$WAIT</code> does <code>XCHG AX, exit_code</code>:
+              one pending code, read once. AL = program code, AH = type.
+            </p>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>Abort_Inner · SavExit</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/msproc.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>$EXIT:
+xchg AH, DidCtrlC
+mov  Exit_Type, EXIT_TERMINATE
+jz   exit_inner
+mov  Exit_Type, EXIT_CTRL_C</pre>
+                <p data-lang="fr">Ctrl-C pendant le fils gagne sur un 4Ch « propre ».</p>
+                <p data-lang="en">Ctrl-C during the child wins over a “clean” 4Ch.</p>
+              </div>
+              <div class="anno__row">
+                <pre>push CurrentPDB
+pop  [SI.User_CS]
+jmp  Abort_Inner</pre>
+                <p data-lang="fr">Le PSP qui meurt doit être celui vu comme CS utilisateur — commentaire : « needs to be correct as the one that is terminating ».</p>
+                <p data-lang="en">The dying PSP must be the one seen as user CS — comment: “needs to be correct as the one that is terminating”.</p>
+              </div>
+              <div class="anno__row">
+                <pre>mov  SI, SavExit          ; 10 = 0Ah
+mov  DI, Addr_Int_Terminate
+movsw × 6                 ; INT 22, 23, 24
+transfer reset_environment</pre>
+                <p data-lang="fr"><code>reset_environment</code> ferme les handles, <a href="memoire.html#owner">arena_free_process</a>, rétablit le père, saute à INT 22.</p>
+                <p data-lang="en"><code>reset_environment</code> closes handles, <a href="memoire.html#owner">arena_free_process</a>, restores the parent, jumps to INT 22.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="tsr">
+        <h2>$Keep_process · AH=31h</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Partir sans rendre toute la RAM</span>
+            <span data-lang="en">Leave without giving all the RAM back</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Un TSR dit : « coupe mon bloc à DX octets, et fais comme
+                si je quittais — mais ne libère pas ce qui reste. »
+                Le père reprend la main, le résident garde son PSP, ses
+                vecteurs, ses handles.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                A TSR says: “trim my block to DX bytes, and pretend I
+                quit — but do not free what remains.” The parent
+                resumes; the resident keeps its PSP, vectors, handles.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>DX ≥ 6 paragraphes</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Moins de 6 paragraphes (96 octets) : DOS force 6 —
+                « keep enough space around for system info ». Puis
+                <a href="memoire.html#coalesce">$SETBLOCK</a> (les
+                erreurs sont ignorées),
+                <code>PDB_block_len</code> mis à jour,
+                <code>Exit_type = EXIT_KEEP_PROCESS</code>, et on tombe
+                dans <code>exit_inner</code> : pas d’<code>arena_free</code>
+                de ce PSP-là.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Fewer than 6 paragraphs (96 bytes): DOS forces 6 —
+                “keep enough space around for system info”. Then
+                <a href="memoire.html#coalesce">$SETBLOCK</a> (errors
+                ignored), <code>PDB_block_len</code> updated,
+                <code>Exit_type = EXIT_KEEP_PROCESS</code>, and we fall
+                into <code>exit_inner</code>: no
+                <code>arena_free</code> of that PSP.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>Stay_Resident</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>dos/msproc.asm — $Keep_process</figcaption>
+              <pre><code>        mov     BYTE PTR Exit_type, EXIT_KEEP_PROCESS
+        cmp     DX, 6h
+        jae     Keep_shrink
+        mov     DX, 6h
+Keep_Shrink:
+        invoke  $SETBLOCK               ; ignore return codes
+        mov     DS:PDB_block_len, AX
+        jmp     SHORT exit_inner</code></pre>
+            </figure>
+            <p class="note" data-lang="fr">
+              <code>Stay_Resident</code> convertit un offset octet en
+              paragraphes (<code>+15</code> puis <code>/16</code>) et
+              rappelle <code>COMMAND</code> avec AH=31h — l’ancienne
+              entrée « INT 27h ».
+            </p>
+            <p class="note" data-lang="en">
+              <code>Stay_Resident</code> converts a byte offset to
+              paragraphs (<code>+15</code> then <code>/16</code>) and
+              re-enters <code>COMMAND</code> with AH=31h — the old
+              “INT 27h” path.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2><span data-lang="fr">Fichiers sources cités</span><span data-lang="en">Source files cited</span></h2>
+        <div class="file-index">
+          <span>dos/msproc.asm<small>$Exec, $EXIT, $ABORT, $WAIT, $Keep_process</small></span>
+          <span>dos/misc.asm<small>$CREATE_PROCESS_DATA_BLOCK, héritage JFN</small></span>
+          <span>inc/exe.inc<small>EXEC0/1/3, EXE_FILE, 5A4Dh, Exit_Type</small></span>
+          <span>inc/pdb.inc<small>PSP, FilPerProc, SavExit, PDB_TAIL</small></span>
+          <span>dos/alloc.asm<small>$ALLOC FFFFh, $SETBLOCK du TSR</small></span>
+          <span>dos/msdisp.asm<small>LeaveDos, A20, 4B05h</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Le fils naît d’un INT 21h et meurt par un autre. Suite naturelle :
+        <strong>COMMAND.COM</strong>, qui construit le bloc EXEC et tape
+        le nom.
+      </p>
+      <p data-lang="en">
+        The child is born from one INT 21h and dies by another. Natural
+        sequel: <strong>COMMAND.COM</strong>, which builds the EXEC
+        block and types the name.
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+  <script src="js/exec.js"></script>
+</body>
+</html>

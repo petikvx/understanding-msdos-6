@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IOCTL — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="int21.html">INT 21h</a>
+      <a href="ioctl.html" aria-current="page">IOCTL</a>
+      <a href="fichiers.html"><span data-lang="fr">Fichiers</span><span data-lang="en">Files</span></a>
+      <a href="config.html">CONFIG</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#ah44">AH=44h</a></li><li><a href="#dev">Device vs fichier</a></li><li><a href="#generic">Generic IOCTL</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dos/ioctl.asm · inc/ioctl.inc · dos/dev.asm</p>
+        <h1>IOCTL</h1>
+        <p class="lede" data-lang="fr">Le couloir de service : parler au <em>pilote</em> plutôt qu’au fichier. Est-ce CON ? Mode raw ? Changer le BPB d’une disquette ? Tout passe par <code>AH=44h</code>, déjà utilisé par <a href="exec.html">$EXEC</a> pour refuser d’exécuter un device.</p>
+        <p class="lede" data-lang="en">The service corridor: talk to the <em>driver</em> rather than the file. Is it CON? Raw mode? Change a floppy’s BPB? All through <code>AH=44h</code>, already used by <a href="exec.html">$EXEC</a> to refuse executing a device.</p>
+      </header>
+      <section class="topic" id="ah44">
+        <h2>Une fonction, beaucoup d’AL</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le handle redevient un ticket</span>
+            <span data-lang="en">The handle is a ticket again</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>On passe le même BX que pour READ. DOS retrouve la SFT, regarde <code>devid_device</code>, et envoie une requête au driver (<code>DEVIOCALL</code> dans <code>dev.asm</code>) au lieu de <code>UNPACK</code>.</p></div>
+            <div data-lang="en"><p>You pass the same BX as for READ. DOS finds the SFT, looks at <code>devid_device</code>, and sends a driver request (<code>DEVIOCALL</code> in <code>dev.asm</code>) instead of <code>UNPACK</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>table de saut 1990</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>HKN (12/3/90) a remplacé une forêt de CMP par une jump table. AL=0 : get device info (bits CON, CLOCK, NUL…). AL=1 : set. AL=2/3 : caractères de contrôle. AL=0Dh/0Eh : generic block.</p></div>
+            <div data-lang="en"><p>HKN (12 Mar 90) replaced a forest of CMPs with a jump table. AL=0: get device info (CON, CLOCK, NUL bits…). AL=1: set. AL=2/3: control chars. AL=0Dh/0Eh: generic block.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>ioctl.inc bits</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Catégorie : bit 7 = user-defined. Fonction : bit 7 = ignorer si inconnu, bit 6 = intercepté par DOS vs passé au driver, bit 5 = query vs send. AN003 : les sous-fonctions 43h/63h… se marchaient dessus avec OS/2.</p>
+            <p class="note" data-lang="en">Category: bit 7 = user-defined. Function: bit 7 = ignore if unknown, bit 6 = intercepted by DOS vs passed to the driver, bit 5 = query vs send. AN003: subfunctions 43h/63h… collided with OS/2.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="dev">
+        <h2>Fichier ou périphérique</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>devid_ISDEV</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le bit 7 de <code>sf_flags</code> (page <a href="fichiers.html#sft">SFT</a>) décide. CTTY, MORE, les redirections de COMMAND s’en servent. <code>MODE</code> et <code>CTTY</code> sont des clients IOCTL.</p></div>
+            <div data-lang="en"><p>Bit 7 of <code>sf_flags</code> (<a href="fichiers.html#sft">SFT</a> page) decides. CTTY, MORE, COMMAND redirections use it. <code>MODE</code> and <code>CTTY</code> are IOCTL clients.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>raw / cooked</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>devid_device_raw</code> : plus de Ctrl-C / tab / echo sur CON. Les programmes plein écran passent en raw. <code>CHARHARD</code> (INT 24 caractère) en dépend.</p></div>
+            <div data-lang="en"><p><code>devid_device_raw</code>: no more Ctrl-C / tab / echo on CON. Full-screen programs go raw. <code>CHARHARD</code> (character INT 24) depends on it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>DEVIOCALL</span></summary>
+          <div class="level-body">
+            <p class="note"><code>dos/dev.asm</code> : <code>SETREAD</code> / <code>SETWRITE</code> / <code>IOFUNC</code> construisent le request header et appellent la stratégie + interruption du driver chargé par <a href="config.html#device">DEVICE=</a>.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="generic">
+        <h2>Generic IOCTL</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span data-lang="fr">Changer de format de disquette sans FORMAT</span>
+            <span data-lang="en">Change floppy format without FORMAT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>KGS, 22 avril 1985 : un paquet générique (catégorie + fonction + buffer). FORMAT et DISKCOPY s’en servent pour dire au driver « cette disquette est 1.44 Mo ».</p></div>
+            <div data-lang="en"><p>KGS, 22 April 1985: a generic packet (category + function + buffer). FORMAT and DISKCOPY use it to tell the driver “this floppy is 1.44 MB”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>multi-track · AN001</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DOS 4 ajoute le formatage / verify multi-pistes. AN002 : disques durs jamais formatés. Le BPB renvoyé alimente le DPB (page FAT).</p></div>
+            <div data-lang="en"><p>DOS 4 adds multi-track format / verify. AN002: never-formatted hard disks. The returned BPB feeds the DPB (FAT page).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>$IOCTL créé ARR 4 Apr 1983</span></summary>
+          <div class="level-body">
+            <p class="note">Même date que beaucoup du noyau 2.x (alloc, exec). IOCTL est l’autre face de INT 21h : pas un fichier, un appareil.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dos/ioctl.asm<small>$IOCTL, jump table</small></span>
+          <span>inc/ioctl.inc<small>bits catégorie/fonction</small></span>
+          <span>dos/dev.asm<small>DEVIOCALL</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">SHARE, juste à côté, s’accroche à la même SFT que IOCTL interroge.</p>
+    <p data-lang="en">SHARE, next door, hooks the same SFT IOCTL queries.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

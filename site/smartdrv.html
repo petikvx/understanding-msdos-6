@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMARTDRV — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="himem.html">HIMEM</a>
+      <a href="smartdrv.html" aria-current="page">SMARTDRV</a>
+      <a href="dblspace.html">DBLSPACE</a>
+      <a href="fat.html">FAT</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#bambi">Bambi</a></li><li><a href="#hooks">INT 13</a></li><li><a href="#dirty">Dirty write</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">dev/smartdrv/ · bambi.asm</p>
+        <h1>SMARTDRV</h1>
+        <p class="lede" data-lang="fr">Le cache disque de DOS 6. Dans le dépôt, il s’appelle <strong>Bambi</strong>. Il se glisse sous INT 13h, garde les secteurs chauds en XMS, et écrit plus tard — d’où le message « waiting for cache » à l’arrêt.</p>
+        <p class="lede" data-lang="en">DOS 6’s disk cache. In the tree it is named <strong>Bambi</strong>. It slips under INT 13h, keeps hot sectors in XMS, and writes later — hence “waiting for cache” at shutdown.</p>
+      </header>
+      <section class="topic" id="bambi">
+        <h2>Bambi</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un cache, pas un système de fichiers</span>
+            <span data-lang="en">A cache, not a file system</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>SMARTDRV ne comprend pas FAT. Il voit des secteurs. Relire le même cluster (page <a href="fat.html">FAT</a>) devient une copie XMS. Windows 3.1 a un VxD jumeau (<code>sdvxd/</code>).</p></div>
+            <div data-lang="en"><p>SMARTDRV does not understand FAT. It sees sectors. Rereading the same cluster (<a href="fat.html">FAT</a> page) becomes an XMS copy. Windows 3.1 has a twin VxD (<code>sdvxd/</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>xms.asm · umbload.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le tampon vit en mémoire étendue via HIMEM. Une petite partie peut tenir en UMB. <code>cacheman.asm</code> / <code>queueman.asm</code> : files LRU. <code>indosbox.asm</code> : se tenir sage sous Windows.</p></div>
+            <div data-lang="en"><p>The buffer lives in extended memory via HIMEM. A little can sit in a UMB. <code>cacheman.asm</code> / <code>queueman.asm</code>: LRU queues. <code>indosbox.asm</code>: behave under Windows.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>bambiapi.txt</span></summary>
+          <div class="level-body">
+            <p class="note">INT 2Fh (<code>int2f.asm</code>) expose l’API « Bambi » pour SMARTMON et Windows. DoubleSpace a un sous-dossier <code>doubleb/</code> : le cache doit connaître les volumes compressés.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="hooks">
+        <h2>Accrocher INT 13</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Sous le BIOS, au-dessus du métal</span>
+            <span data-lang="en">Under the BIOS, above the metal</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>hooks.asm</code> prend INT 13h (et parfois 2Fh). IO.SYS a déjà le sien (<a href="int13.html">page INT 13</a>) : la chaîne devient programme → SMARTDRV → IO.SYS → ROM.</p></div>
+            <div data-lang="en"><p><code>hooks.asm</code> takes INT 13h (and sometimes 2Fh). IO.SYS already has its own (<a href="int13.html">INT 13 page</a>): the chain is program → SMARTDRV → IO.SYS → ROM.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>logphys.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Il faut distinguer lecteur logique DOS et unité BIOS. <code>get_dpb.asm</code> relie au DPB. Un cache trop zélé sur une disquette changeante est un désastre — d’où les options /X et le media check.</p></div>
+            <div data-lang="en"><p>Logical DOS drive and BIOS unit must be told apart. <code>get_dpb.asm</code> ties to the DPB. A too-eager cache on a changing floppy is a disaster — hence /X and media check.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>reboot.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">Au reboot, il faut vider le cache sale. <code>reboot.asm</code> / <code>dirtywrt.asm</code>. Ctrl-Alt-Del sans flush = FAT incohérente — CHKDSK au suivant.</p>
+            <p class="note" data-lang="en">On reboot the dirty cache must be flushed. <code>reboot.asm</code> / <code>dirtywrt.asm</code>. Ctrl-Alt-Del without a flush = inconsistent FAT — CHKDSK next time.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="dirty">
+        <h2>Écriture différée</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Plus vite, plus risqué</span>
+            <span data-lang="en">Faster, riskier</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Write-behind : <code>COPY</code> rend la main avant que le disque ait tout. Coupure de courant = clusters à moitié écrits. D’où le cache en lecture seule sur les disquettes par défaut.</p></div>
+            <div data-lang="en"><p>Write-behind: <code>COPY</code> returns before the disk has everything. Power loss = half-written clusters. Hence read-only cache on floppies by default.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>dirtywrt.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le noyau a déjà <code>buf_dirty</code> (page FAT). SMARTDRV est un deuxième étage, plus gros, en XMS. Les deux peuvent coexister ; BUFFERS= petit suffit alors.</p></div>
+            <div data-lang="en"><p>The kernel already has <code>buf_dirty</code> (FAT page). SMARTDRV is a second, larger tier in XMS. Both can coexist; a small BUFFERS= is then enough.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>checksum.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Un checksum interne détecte la corruption du cache. <code>popup.asm</code> / <code>beep.asm</code> : l’interface utilisateur quand ça va mal.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>dev/smartdrv/bambi.asm<small>cœur, nom de code</small></span>
+          <span>dev/smartdrv/hooks.asm · dirtywrt.asm<small>INT 13, flush</small></span>
+          <span>dev/smartdrv/xms.asm · umbload.asm<small>où vit le cache</small></span>
+          <span>dev/smartdrv/doubleb/<small>DoubleSpace</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Le volume compressé que Bambi doit aussi cacher : <a href="dblspace.html">DoubleSpace</a>.</p>
+    <p data-lang="en">The compressed volume Bambi must also cache: <a href="dblspace.html">DoubleSpace</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

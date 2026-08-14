@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amorçage — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="boot.html" aria-current="page">Boot</a>
+        <a href="config.html">CONFIG</a>
+        <a href="himem.html">HIMEM</a>
+        <a href="fat.html">FAT</a>
+        <a href="command.html">COMMAND</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+        <div class="ctrl">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+          <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+          <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+          <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc">
+      <h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol>
+        <li><a href="#rom">ROM → 7C00h</a></li>
+        <li><a href="#iosys">IO.SYS</a></li>
+        <li><a href="#msload">MSLOAD</a></li>
+        <li><a href="#sources"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a></li>
+      </ol>
+    </nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">boot/msboot.asm · bios/msload.asm</p>
+        <h1><span data-lang="fr">Amorçage</span><span data-lang="en">Boot</span></h1>
+        <p class="lede" data-lang="fr">Avant COMMAND.COM, avant INT 21h : 512 octets à l’adresse physique <code>07C00h</code> doivent trouver <code>IO.SYS</code>, le poser en <code>00700h</code>, et lui passer la main. Tout le reste du site naît de ce saut.</p>
+        <p class="lede" data-lang="en">Before COMMAND.COM, before INT 21h: 512 bytes at physical <code>07C00h</code> must find <code>IO.SYS</code>, place it at <code>00700h</code>, and jump. The rest of this site is born from that jump.</p>
+      </header>
+
+      <ol class="steps-ol">
+        <li><strong>ROM BIOS</strong> — INIT matériel, INT 19h, piste 0 tête 0 secteur 1 → <code>0000:7C00</code>, SP=<code>0400h</code>.</li>
+        <li><strong>msboot</strong> — lit le BPB, cherche <code>IO.SYS</code> dans la racine (copie à <code>500h</code>).</li>
+        <li><strong>3 secteurs</strong> — <code>IBM_LOAD_SIZE = 3</code>, premier cluster, contigus (déjà vu dans <a href="fat.html#anatomie">FAT · bootform</a>).</li>
+        <li><strong>msload</strong> — suit la FAT pour le reste d’IO.SYS (DOS 4+ : un secteur FAT à la fois).</li>
+        <li><strong>SYSINIT</strong> — construit les DPB, lit CONFIG.SYS, charge HIMEM, COMMAND.COM.</li>
+      </ol>
+
+      <section class="topic" id="rom">
+        <h2>ROM → 7C00h</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un seul secteur, tout le contrat</span>
+            <span data-lang="en">One sector, the whole contract</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le BIOS ne connaît pas FAT. Il lit le premier secteur du disque d’amorçage et l’exécute. Si ce secteur ne trouve pas les fichiers système, message et halt — pas encore de DOS pour afficher autre chose.</p></div>
+            <div data-lang="en"><p>The BIOS does not know FAT. It reads the first sector of the boot disk and runs it. If that sector cannot find the system files: a message and a halt — there is no DOS yet to print anything else.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>CS=DS=ES=SS=0 · IP=7C00h</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le BPB est en tête (après le saut), comme sur la page FAT. FORMAT et SYS comptent sur <code>PHYDRV</code> à un offset fixe (fin du secteur) — Rev 3.2, LeeAc. On <em>croit</em> les boot 2.0 et 3.1, on <em>doute</em> du 3.0 (BPB décalé d’un octet sur certains disques IBM).</p></div>
+            <div data-lang="en"><p>The BPB sits at the front (after the jump), as on the FAT page. FORMAT and SYS count on <code>PHYDRV</code> at a fixed offset (end of the sector) — Rev 3.2, LeeAc. We <em>trust</em> 2.0 and 3.1 boots, we <em>distrust</em> 3.0 (BPB off by one on some IBM disks).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>ORIGIN · DIR_OFF</span></summary>
+          <div class="level-body">
+            <figure class="source"><figcaption>boot/msboot.asm</figcaption>
+<pre><code>ORIGIN          EQU     7C00H
+BIO_SEG         EQU     70H             ; IO.SYS at 00700h
+DIR_OFF         EQU     500h            ; root sector parked here
+IBM_LOAD_SIZE   EQU     3               ; first cluster, contiguous
+DIR_ENTRY_SIZE  EQU     32</code></pre></figure>
+            <p class="note" data-lang="fr">Rev 3.31 : un <code>JBE</code> pourri pouvait lire trop de secteurs IO.SYS et écraser le boot ou la pile. DOS 4 ajoute le calcul 32 bits pour une partition primaire au-delà de 32 Mo.</p>
+            <p class="note" data-lang="en">Rev 3.31: a bogus <code>JBE</code> could read too many IO.SYS sectors and smash the boot or the stack. DOS 4 adds 32-bit math so a primary partition may start past 32 MB.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="iosys">
+        <h2>IO.SYS · premier cluster</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Les fichiers système doivent être devant</span>
+            <span data-lang="en">The system files must sit in front</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>SYS</code> recopie IO.SYS / MSDOS.SYS de façon contiguë en tête des données. Le boot ne sait suivre qu’un tout petit bout de chaîne — d’où l’exigence « premier cluster, secteurs qui se suivent ».</p></div>
+            <div data-lang="en"><p><code>SYS</code> copies IO.SYS / MSDOS.SYS contiguously at the front of the data area. The boot can only follow a tiny bit of chain — hence “first cluster, consecutive sectors”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>AN006 : plus seulement le 1er cluster</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Jusqu’à une certaine époque, tout IBMLOAD tenait dans le premier cluster. AN006 (avril 1990) lève cette restriction : msload sait enchaîner. Le boot lit toujours les 3 premiers secteurs pour démarrer le chargeur.</p></div>
+            <div data-lang="en"><p>For a long time the whole IBMLOAD had to fit in the first cluster. AN006 (April 1990) lifts that: msload can walk the chain. The boot still reads the first 3 sectors to start the loader.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>même valeur que bootform.inc</span></summary>
+          <div class="level-body">
+            <p class="note"><code>IBMLOADSIZE equ 3</code> dans <code>inc/bootform.inc</code> doit rester égal à <code>IBM_LOAD_SIZE</code> ici. Le commentaire de msload : le boot <em>devrait</em> vérifier que IO.SYS commence bien au cluster 2 — « this would save a whole lot of time during system debugging ».</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="msload">
+        <h2>MSLOAD → SYSINIT</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Le relais qui connaît la FAT</span>
+            <span data-lang="en">The relay that knows FAT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une fois les 3 secteurs en place, un vrai petit chargeur reprend : il lit la FAT (un secteur à la fois depuis DOS 4, pour aller plus vite et tenir en RAM), charge tout IO.SYS, puis SYSINIT prend le relais — CONFIG.SYS, puis COMMAND.COM.</p></div>
+            <div data-lang="en"><p>Once the 3 sectors are in, a real little loader takes over: it reads the FAT (one sector at a time since DOS 4, faster and less RAM), loads all of IO.SYS, then SYSINIT takes over — CONFIG.SYS, then COMMAND.COM.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>Limite 29 Ko levée</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>DOS 4 : calculs 32 bits, plus de plafond ~29 Ko sur IO.SYS, même message d’erreur que le boot si la lecture échoue. M056 : laisser l’INT 13 « fake » d’un RPL tranquille pour ne pas se faire marcher dessus par SYSINIT ni par le transient de COMMAND.</p></div>
+            <div data-lang="en"><p>DOS 4: 32-bit math, no more ~29 KB cap on IO.SYS, same error path as the boot if a read fails. M056: leave an RPL’s fake INT 13 alone so SYSINIT and COMMAND’s transient do not step on it.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>bios/sysinit1.asm</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr">SYSINIT ne demande plus de RAM à DOS pour DOS (M012) : il bricole <code>arena_head</code> juste au-dessus du noyau. MULTI_CONFIG : plusieurs blocs CONFIG. <code>LoadDOSHiOrLow</code> essaie la HMA (page HIMEM). Ensuite : <a href="config.html">CONFIG.SYS</a>.</p>
+            <p class="note" data-lang="en">SYSINIT no longer asks DOS for RAM for DOS (M012): it patches <code>arena_head</code> just above the kernel. MULTI_CONFIG: several CONFIG blocks. <code>LoadDOSHiOrLow</code> tries the HMA (HIMEM page). Next: <a href="config.html">CONFIG.SYS</a>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></h2>
+        <div class="file-index">
+          <span>boot/msboot.asm<small>secteur 0, 7C00h, IBM_LOAD_SIZE</small></span>
+          <span>inc/bootform.inc<small>IBMLOADSIZE, BPB étendu</small></span>
+          <span>bios/msload.asm<small>chargeur IO.SYS, FAT à la demande</small></span>
+          <span>bios/sysinit1.asm · sysinit2.asm<small>arènes, HMA, CONFIG</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Suite : <a href="config.html">CONFIG.SYS</a> — ce que SYSINIT lit ensuite.</p>
+    <p data-lang="en">Next: <a href="config.html">CONFIG.SYS</a> — what SYSINIT reads next.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

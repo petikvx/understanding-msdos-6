@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETVER — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="exec.html">EXEC</a>
+      <a href="setver.html" aria-current="page">SETVER</a>
+      <a href="int21.html">INT 21h</a>
+      <a href="config.html">CONFIG</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#lie">La table des mensonges</a></li><li><a href="#ah30">AH=30h</a></li><li><a href="#device">DEVICE=SETVER.EXE</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/setver/ · dos/msproc.asm Scan_Special_Entries</p>
+        <h1>SETVER</h1>
+        <p class="lede" data-lang="fr">Certains programmes refusent de tourner s’ils ne voient pas « DOS 3.3 » ou « 4.0 ». Au lieu de les corriger, DOS leur <em>ment</em>. SETVER tient la liste ; <code>$EXEC</code> la consulte ; <code>$GET_VERSION</code> rend le numéro fictif. Le dépôt cite IBMCACHE et Windows comme clients historiques.</p>
+        <p class="lede" data-lang="en">Some programs refuse to run unless they see “DOS 3.3” or “4.0”. Instead of fixing them, DOS <em>lies</em>. SETVER holds the list; <code>$EXEC</code> consults it; <code>$GET_VERSION</code> returns the fake number. The tree names IBMCACHE and Windows as historic clients.</p>
+      </header>
+      <section class="topic" id="lie">
+        <h2>Special_Version</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>SETVER FOO.EXE 3.30</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>On ajoute un nom et une version. Au prochain EXEC de ce fichier, AL/AH de INT 21h AH=30h ne seront plus 6.00. Le PSP a même un champ <code>PDB_Version</code> pour figer le mensonge par processus.</p></div>
+            <div data-lang="en"><p>You add a name and a version. On the next EXEC of that file, AL/AH of INT 21h AH=30h will no longer be 6.00. The PSP even has a <code>PDB_Version</code> field to freeze the lie per process.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>Scan_Special_Entries · M050</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>La recherche dans la table est <em>insensible à la casse</em> (M050). M060 : la table a quitté le noyau pour un device driver qui pose son adresse dans <code>UU_IFS_DOS_CALL</code>. A007 / A008 : entrées spéciales IBMCACHE et MS Windows.</p></div>
+            <div data-lang="en"><p>The table search is <em>case-insensitive</em> (M050). M060: the table left the kernel for a device driver that plants its address in <code>UU_IFS_DOS_CALL</code>. A007 / A008: special IBMCACHE and MS Windows entries.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>Fake_Count</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr"><code>Fake_Count = 0FFh</code> : reset à la version courante (code commenté <code>Reset_Version</code>). M006 : l’ancienne API « fake version call » n’est plus supportée (août 1990) — trop de gens s’en servaient n’importe comment.</p>
+            <p class="note" data-lang="en"><code>Fake_Count = 0FFh</code>: reset to the current version (commented <code>Reset_Version</code>). M006: the old “fake version call” API is no longer supported (August 1990) — too many people used it carelessly.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="ah30">
+        <h2>GetVersion</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
+            <span>AH=30h · AH=33h sous-fonctions</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le numéro « vrai » reste 6.00 pour qui n’est pas sur la liste. Windows et les utilitaires modernes utilisent aussi des sous-fonctions de 33h (M007) pour éviter SETVER.</p></div>
+            <div data-lang="en"><p>The “true” number stays 6.00 for anyone not on the list. Windows and modern utilities also use 33h subfunctions (M007) to avoid SETVER.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>RESTRICTED_BUILD</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Variante de build : une liste blanche de programmes autorisés à s’exécuter (<code>restrict.inc</code>, 20-Jul-1992 bens) — disque « service » OEM. Autre forme de mensonge : tout le reste reçoit access denied.</p></div>
+            <div data-lang="en"><p>Build variant: a whitelist of programs allowed to run (<code>restrict.inc</code>, 20-Jul-1992 bens) — OEM “service” disk. Another kind of lie: everyone else gets access denied.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>setver.c · device.asm</span></summary>
+          <div class="level-body">
+            <p class="note">L’utilitaire est en C (<code>setver.c</code>, <code>parse.c</code>) plus un mini-driver (<code>device.asm</code>) que CONFIG.SYS charge pour que la table survive en mémoire.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="device">
+        <h2>DEVICE=SETVER.EXE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un .EXE qui est aussi un pilote</span>
+            <span data-lang="en">An .EXE that is also a driver</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Comme HIMEM, on le met dans CONFIG.SYS pour qu’il soit là <em>avant</em> les programmes qui posent la question. En ligne de commande, le même binaire édite la table sur disque.</p></div>
+            <div data-lang="en"><p>Like HIMEM, it goes in CONFIG.SYS so it is there <em>before</em> programs that ask. From the command line the same binary edits the on-disk table.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span>
+            <span>table dans le binaire</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les paires nom/version sont stockées <em>dans</em> SETVER.EXE. Chaque ajout réécrit le fichier. D’où les sauvegardes avant d’y toucher, et les messages « version table is full ».</p></div>
+            <div data-lang="en"><p>Name/version pairs are stored <em>inside</em> SETVER.EXE. Each add rewrites the file. Hence backups before touching it, and “version table is full”.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
+            <span>dos.asm</span></summary>
+          <div class="level-body">
+            <p class="note">Le lien EXEC : après TransPath / $OPEN, le nom canonique est comparé à la table avant de construire le PSP. Le mensonge est donc prêt quand le fils fera son premier AH=30h.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/setver/setver.c · device.asm<small>table, driver</small></span>
+          <span>dos/msproc.asm<small>Scan_Special_Entries, Fake_Count</small></span>
+          <span>dos/getset.asm<small>$GET_VERSION</small></span>
+          <span>inc/pdb.inc<small>PDB_Version</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Vingt-deux articles. Le site tient maintenant du manuel de bord plus que du prototype.</p>
+    <p data-lang="en">Twenty-two articles. The site is now more of a handbook than a prototype.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

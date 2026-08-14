@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XCOPY · REPLACE · EXPAND — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="diskcopy.html">DISKCOPY</a>
+      <a href="xcopy.html" aria-current="page">XCOPY</a>
+      <a href="backup.html">BACKUP</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#xcopy">XCOPY</a></li><li><a href="#replace">REPLACE</a></li><li><a href="#expand">EXPAND</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">cmd/xcopy · cmd/replace · cmd/expand</p>
+        <h1>XCOPY · REPLACE · EXPAND</h1>
+        <p class="lede" data-lang="fr">Trois façons de déplacer des octets sans cloner le média. XCOPY marche l’arbre et remplit la RAM. REPLACE ne touche que les homonymes. EXPAND décompresse les <code>.EX_</code> de la disquette d’install — Lempel-Ziv, signature <code>SZDD</code>.</p>
+        <p class="lede" data-lang="en">Three ways to move bytes without cloning the media. XCOPY walks the tree and fills RAM. REPLACE only touches namesakes. EXPAND decompresses the install-disk <code>.EX_</code> files — Lempel-Ziv, <code>SZDD</code> signature.</p>
+      </header>
+
+      <section class="topic" id="xcopy">
+        <h2>XCOPY C:\SRC D:\DST /S /E</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>COPY qui sait les dossiers</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>Le <code>COPY</code> interne de COMMAND ne descend pas. XCOPY si : <code>/S</code> marche l’arbre, <code>/E</code> recrée même les répertoires vides. Sur un seul lecteur, il remplit d’abord toute la TPA de fichiers source, puis écrit — moins de « Insert source diskette » que COPY.</p>
+              <p>Ce n’est pas DISKCOPY : boot, FAT et clusters libres restent dehors. Ce n’est pas non plus BACKUP : les fichiers restent des fichiers DOS, lisibles sans RESTORE.</p>
+            </div>
+            <div data-lang="en">
+              <p>COMMAND’s internal <code>COPY</code> does not descend. XCOPY does: <code>/S</code> walks the tree, <code>/E</code> recreates even empty directories. On a single drive it first fills the whole TPA with source files, then writes — fewer “Insert source diskette” swaps than COPY.</p>
+              <p>It is not DISKCOPY: boot, FAT and free clusters stay out. It is not BACKUP either: files remain ordinary DOS files, readable without RESTORE.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>OPTION_FLAG</span></summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>Les interrupteurs vivent dans un octet <code>OPTION_FLAG</code> (<code>xcopy.equ</code>) :</p>
+              <table>
+                <thead><tr><th>bit</th><th>switch</th><th data-lang="fr">sens</th><th data-lang="en">meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>01h</code></td><td><code>/A</code></td><td>archive « doux » (copie, laisse le bit)</td><td>soft archive (copy, leave the bit)</td></tr>
+                  <tr><td><code>02h</code></td><td><code>/D</code></td><td>date minimale</td><td>minimum date</td></tr>
+                  <tr><td><code>04h</code></td><td><code>/E</code></td><td>répertoires vides</td><td>empty dirs</td></tr>
+                  <tr><td><code>08h</code></td><td><code>/M</code></td><td>archive « dur » (éteint le bit source)</td><td>hard archive (clears source bit)</td></tr>
+                  <tr><td><code>10h</code></td><td><code>/P</code></td><td>prompt fichier par fichier</td><td>per-file prompt</td></tr>
+                  <tr><td><code>20h</code></td><td><code>/S</code></td><td>descendre</td><td>walk the tree</td></tr>
+                  <tr><td><code>40h</code></td><td><code>/V</code></td><td>VERIFY pendant l’écriture</td><td>VERIFY while writing</td></tr>
+                  <tr><td><code>80h</code></td><td><code>/W</code></td><td>« Press any key… »</td><td>“Press any key…”</td></tr>
+                </tbody>
+              </table>
+              <p>Le bit archive de l’entrée répertoire (page FAT) sert ici de marqueur de sauvegarde pauvre : XCOPY <code>/M</code> puis XCOPY <code>/A</code> le lendemain. APPEND est éteint pendant la descente — sinon on ouvre le mauvais fichier.</p>
+            </div>
+            <div data-lang="en">
+              <p>Switches live in one <code>OPTION_FLAG</code> byte (<code>xcopy.equ</code>). The directory archive bit (FAT page) is a poor man’s backup marker: XCOPY <code>/M</code> then XCOPY <code>/A</code> the next day. APPEND is turned off while walking — otherwise the wrong file is opened.</p>
+            </div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>en-tête + 63 caractères</span></summary>
+          <div class="level-body">
+            <p class="note" data-lang="fr"><code>xcopy.asm</code> : « WITH FULL MEMORY USE ». Chaque fichier lu devient un <em>header</em> chaîné (<code>Next_Ptr</code> / <code>Before_Ptr</code>, <code>Continue_Info</code> 0=entier, 1=petit fragment, 2=gros fichier, 3=EOF). Init vit dans un segment jetable (<code>DSEG_INIT</code>) pour laisser la place aux buffers.</p>
+            <p class="note" data-lang="en"><code>xcopy.asm</code>: “WITH FULL MEMORY USE”. Each file read becomes a chained <em>header</em> (<code>Next_Ptr</code> / <code>Before_Ptr</code>, <code>Continue_Info</code> 0=whole, 1=small fragment, 2=big file, 3=EOF). Init lives in a disposable segment (<code>DSEG_INIT</code>) to leave room for buffers.</p>
+            <pre><code>; xcopy.asm — C02 02APR90
+; If /S and source+target paths would exceed 63 characters,
+; files may silently not be copied. After the fix:
+;   "Invalid path, not all directories/files copied"</code></pre>
+            <p data-lang="fr">C01 le même jour : racine pleine ou profondeur max — XCOPY s’arrêtait sans lister ce qui manquait. C09 (31JAN91) : l’INT 24 écrivait <code>ERRORLEVEL</code> avec le mauvais DS (porte de lecteur ouverte au départ). I00 : errorlevel 1 à tort si <code>/S</code>.</p>
+            <p data-lang="en">C01 the same day: full root or max depth — XCOPY stopped without listing what was missing. C09 (31JAN91): INT 24 wrote <code>ERRORLEVEL</code> with the wrong DS (drive door open at start). I00: spurious errorlevel 1 with <code>/S</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="replace">
+        <h2>REPLACE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>mettre à jour, pas cloner</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>XCOPY crée. REPLACE ne remplace que les fichiers qui existent déjà sur la cible — sauf <code>/A</code>, qui n’ajoute que ceux qui n’y sont pas. Les deux à la fois sont interdits, comme <code>/A</code>+<code>/S</code> et <code>/A</code>+<code>/U</code>.</p></div>
+            <div data-lang="en"><p>XCOPY creates. REPLACE only replaces files that already exist on the target — except <code>/A</code>, which only adds those that are not there. Both at once are forbidden, as are <code>/A</code>+<code>/S</code> and <code>/A</code>+<code>/U</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>/U /R /P /W</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>/U</code> : seulement si la source est plus récente (date/heure de l’entrée répertoire). <code>/R</code> : écrase aussi les read-only. <code>/S</code> cherche l’homonyme dans tout l’arbre cible. Utilitaire C, DOS 5, même parseur commun que BACKUP/ATTRIB.</p></div>
+            <div data-lang="en"><p><code>/U</code>: only if the source is newer (directory date/time). <code>/R</code>: overwrite read-only too. <code>/S</code> looks for the namesake in the whole target tree. C utility, DOS 5, same shared parser as BACKUP/ATTRIB.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>cmd/replace/replace.c</span></summary>
+          <div class="level-body">
+            <p class="note">FindFirst/FindNext + comparaison de noms 8.3. Pas de buffer « full memory » : un fichier à la fois. Moins de RAM, plus d’I/O, sémantique plus sûre pour une mise à jour d’appli.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="expand">
+        <h2>EXPAND · signature SZDD</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>HIMEM.SY_ → HIMEM.SYS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les disquettes Setup portent des fichiers compressés (dernier caractère remplacé par <code>_</code>). EXPAND les gonfle. Écrit par Steve Zeck et David Dickman, 1989–1991 — le même Lempel-Ziv que COMPRESS côté install.</p></div>
+            <div data-lang="en"><p>Setup floppies carry compressed files (last character replaced by <code>_</code>). EXPAND inflates them. Written by Steve Zeck and David Dickman, 1989–1991 — the same Lempel-Ziv as COMPRESS on the install side.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>anneau 4096</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>En-tête : 8 octets <code>"SZDD\x88\xF0\x27\x33"</code>, algorithme <code>'A'</code> (Lempel-Ziv), version 0, taille décompressée, date préservée. Buffer circulaire 4096, match max 16 octets. I/O jusqu’à 32 Ko, reculé par pas de 512 si malloc échoue.</p></div>
+            <div data-lang="en"><p>Header: 8 bytes <code>"SZDD\x88\xF0\x27\x33"</code>, algorithm <code>'A'</code> (Lempel-Ziv), version 0, uncompressed size, date preserved. 4096-byte ring, match max 16 bytes. I/O up to 32 KB, stepped down by 512 if malloc fails.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>doslzexp.h</span></summary>
+          <div class="level-body">
+            <pre><code>#define szCompSig  "SZDD\x88\xf0\x27\x33"
+#define cbRingBufMax    4096
+#define cbStrMax        16
+#define uchALG_LEMPEL_ZIV  ((UCHAR) 'A')</code></pre>
+            <p class="note" data-lang="fr">Fragmentation primitive : si le disque cible est plein, COMPRESS demande une autre disquette et continue sous le même nom. Pour décompresser, il faut recoller les morceaux (<code>COPY /B a:f.1+a:f.2 f.out</code>) avant EXPAND. Commentaire de <code>expand.c</code> : « occupies more than one floppy disk is handled in a primitive way ».</p>
+            <p class="note" data-lang="en">Primitive fragmentation: if the target disk is full, COMPRESS asks for another floppy and continues under the same name. To decompress, you must glue the pieces (<code>COPY /B a:f.1+a:f.2 f.out</code>) before EXPAND. Comment in <code>expand.c</code>: “occupies more than one floppy disk is handled in a primitive way”.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>cmd/xcopy/xcopy.asm<small>FULL MEMORY USE, C01/C02/C09</small></span>
+          <span>cmd/xcopy/xcopy.equ<small>OPTION_FLAG /A/D/E/M/P/S/V/W</small></span>
+          <span>cmd/replace/replace.c<small>DOS 5, /A /U /S mutuellement exclusifs</small></span>
+          <span>cmd/expand/doslzexp.h<small>SZDD, anneau 4096</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Pour une sauvegarde qui n’est plus un arbre de fichiers : <a href="backup.html">BACKUP · RESTORE</a>.</p>
+    <p data-lang="en">For a backup that is no longer a tree of files: <a href="backup.html">BACKUP · RESTORE</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

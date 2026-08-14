@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fichiers ouverts — Comprendre MS-DOS 6 / Open files — Understanding MS-DOS 6</title>
+  <meta name="description" content="Handles, SFT, FCB : comment MS-DOS 6 ouvre, lit et ferme un fichier, du PSP jusqu’à la FAT.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">
+    <span data-lang="fr">Aller au contenu</span>
+    <span data-lang="en">Skip to content</span>
+  </a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html">
+          <span data-lang="fr">Accueil</span>
+          <span data-lang="en">Home</span>
+        </a>
+        <a href="fat.html">FAT</a>
+        <a href="fichiers.html" aria-current="page">
+          <span data-lang="fr">Fichiers</span>
+          <span data-lang="en">Files</span>
+        </a>
+        <a href="memoire.html"><span data-lang="fr">Mémoire</span><span data-lang="en">Memory</span></a>
+        <a href="int21.html">INT 21h</a>
+        <a href="exec.html">EXEC</a>
+        <a href="command.html">COMMAND</a>
+        <a href="boot.html">Boot</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="ctrl" role="group" aria-label="Level">
+          <button type="button" data-set="level" data-value="discovery" aria-pressed="true">
+            <span data-lang="fr">Découverte</span>
+            <span data-lang="en">Discovery</span>
+          </button>
+          <button type="button" data-set="level" data-value="intermediate" aria-pressed="false">
+            <span data-lang="fr">Intermédiaire</span>
+            <span data-lang="en">Intermediate</span>
+          </button>
+          <button type="button" data-set="level" data-value="technical" aria-pressed="false">
+            <span data-lang="fr">Technique</span>
+            <span data-lang="en">Technical</span>
+          </button>
+          <button type="button" data-set="level" data-value="all" aria-pressed="false">
+            <span data-lang="fr">Tout</span>
+            <span data-lang="en">All</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title">
+        <span data-lang="fr">Sur cette page</span>
+        <span data-lang="en">On this page</span>
+      </h2>
+      <ol>
+        <li><a href="#trace">
+          <span data-lang="fr">La machine</span>
+          <span data-lang="en">The machine</span>
+        </a></li>
+        <li><a href="#handle">Handle · JFN</a></li>
+        <li><a href="#sft">SFT</a></li>
+        <li><a href="#open">OPEN</a></li>
+        <li><a href="#lire">
+          <span data-lang="fr">Lire, écrire, se positionner</span>
+          <span data-lang="en">Read, write, seek</span>
+        </a></li>
+        <li><a href="#close">CLOSE</a></li>
+        <li><a href="#fcb">FCB</a></li>
+        <li><a href="#stdio">0 1 2 3 4</a></li>
+        <li><a href="#dup">
+          <span data-lang="fr">Dup, héritage, FILES=</span>
+          <span data-lang="en">Dup, inherit, FILES=</span>
+        </a></li>
+        <li><a href="#sources">
+          <span data-lang="fr">Fichiers sources</span>
+          <span data-lang="en">Source files</span>
+        </a></li>
+      </ol>
+    </nav>
+
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">MS-DOS 6 · dos/util.asm · sf.inc · pdb.inc</p>
+        <h1>
+          <span data-lang="fr">Fichiers ouverts</span>
+          <span data-lang="en">Open files</span>
+        </h1>
+        <p class="lede" data-lang="fr">
+          La page <a href="fat.html">FAT</a> disait où sont les octets.
+          Celle-ci dit comment un programme y touche : un petit numéro
+          dans le PSP, une fiche cachée dans le noyau, puis
+          <code>UNPACK</code>. Cliquez la machine — c’est un
+          <code>TYPE AUTOEXEC.BAT</code> vu de l’intérieur.
+        </p>
+        <p class="lede" data-lang="en">
+          The <a href="fat.html">FAT</a> page said where the bytes live.
+          This one says how a program touches them: a small number in the
+          PSP, a hidden card in the kernel, then <code>UNPACK</code>.
+          Click the machine — it is <code>TYPE AUTOEXEC.BAT</code> from
+          the inside.
+        </p>
+      </header>
+
+      <section class="machine" id="trace" aria-labelledby="trace-title">
+        <div class="machine__bar">
+          <h2 id="trace-title">
+            <span data-lang="fr">TYPE AUTOEXEC.BAT, pas à pas</span>
+            <span data-lang="en">TYPE AUTOEXEC.BAT, step by step</span>
+          </h2>
+          <div class="machine__ctrl">
+            <button type="button" data-trace="prev">←</button>
+            <button type="button" data-trace="play">
+              <span data-lang="fr">Lecture</span>
+              <span data-lang="en">Play</span>
+            </button>
+            <button type="button" data-trace="next">→</button>
+            <button type="button" data-trace="reset">
+              <span data-lang="fr">Début</span>
+              <span data-lang="en">Start</span>
+            </button>
+          </div>
+        </div>
+        <ol class="machine__dots" data-dots></ol>
+        <div class="machine__stage">
+          <div class="panel">
+            <h3>PDB_JFN_Table · 20 octets</h3>
+            <div class="jfn-grid" data-jfn></div>
+          </div>
+          <div class="panel">
+            <h3>sf_entry · ThisSFT</h3>
+            <dl class="sft-card" data-sft></dl>
+          </div>
+          <div class="panel">
+            <h3>
+              <span data-lang="fr">Registres vus par INT 21h</span>
+              <span data-lang="en">Registers as INT 21h sees them</span>
+            </h3>
+            <div class="regs" data-regs></div>
+          </div>
+          <div class="panel">
+            <h3>FAT · sf_firclus = 12</h3>
+            <div class="fat-mini" data-fat></div>
+            <p class="note" style="margin-top:0.55rem">
+              <span data-lang="fr"><code>FNDCLUS</code> → <code>UNPACK</code> → <code>FIGREC</code> — <a href="fat.html#table">page FAT</a></span>
+              <span data-lang="en"><code>FNDCLUS</code> → <code>UNPACK</code> → <code>FIGREC</code> — <a href="fat.html#table">FAT page</a></span>
+            </p>
+          </div>
+        </div>
+        <p class="machine__say" data-say></p>
+      </section>
+
+      <!-- Handle -->
+      <section class="topic" id="handle">
+        <h2>Handle · JFN</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Un numéro de vestiaire, pas le manteau</span>
+            <span data-lang="en">A cloakroom ticket, not the coat</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Quand BASIC ou <code>TYPE</code> « ouvre » un fichier, DOS
+                ne leur donne pas l’adresse du fichier sur le disque. Il
+                rend un petit entier : 5, 6, 7… C’est un
+                <strong>handle</strong>. Pour lire, on rend ce numéro ;
+                DOS se souvient du reste.
+              </p>
+              <p>
+                Ce numéro n’est valable que pour <em>ce</em> programme.
+                Le même 5, chez un autre processus, désigne un autre
+                fichier — ou rien.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                When BASIC or <code>TYPE</code> “opens” a file, DOS does
+                not hand them the file’s disk address. It returns a small
+                integer: 5, 6, 7… That is a <strong>handle</strong>. To
+                read, you give the number back; DOS remembers the rest.
+              </p>
+              <p>
+                The number is only valid for <em>this</em> program. The
+                same 5 in another process names another file — or nothing.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>PDB_JFN_Table[BX] → SFN</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Chaque processus a un <strong>PSP</strong> (Process data
+                block). Dedans, une table de 20 octets :
+                <code>PDB_JFN_Table</code>. Le handle est un index dans
+                cette table. La case contient un <em>System File Number</em>
+                (SFN), ou <code>FFh</code> si elle est libre.
+              </p>
+              <p>
+                À partir de DOS&nbsp;3.3 on peut agrandir la table
+                (<code>AH=67h</code>, <code>$ExtHandle</code>) : alors
+                <code>PDB_JFN_Pointer</code> et
+                <code>PDB_JFN_Length</code> désignent un tableau ailleurs.
+                On ne peut pas descendre sous 20
+                (<code>FilPerProc</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Every process has a <strong>PSP</strong> (Process data
+                block). Inside it, a 20-byte table:
+                <code>PDB_JFN_Table</code>. The handle is an index into
+                that table. The slot holds a <em>System File Number</em>
+                (SFN), or <code>FFh</code> if it is free.
+              </p>
+              <p>
+                From DOS&nbsp;3.3 the table can grow
+                (<code>AH=67h</code>, <code>$ExtHandle</code>): then
+                <code>PDB_JFN_Pointer</code> and
+                <code>PDB_JFN_Length</code> point at an array elsewhere.
+                It cannot shrink below 20
+                (<code>FilPerProc</code>).
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>pJFNFromHandle · SFFromHandle</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Toute opération à handle commence ici
+                (<code>dos/util.asm</code>). Deux étages, jamais un
+                accès direct à la SFT depuis BX.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Every handle operation starts here
+                (<code>dos/util.asm</code>). Two steps, never a direct
+                SFT access from BX.
+              </p>
+            </div>
+            <p class="illust__cap">dos/util.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>MOV  ES, CurrentPDB
+CMP  BX, ES:PDB_JFN_Length
+JB   pjfn10
+; else error_invalid_handle</pre>
+                <p data-lang="fr">Handle trop grand pour <em>ce</em> PSP → erreur 6.</p>
+                <p data-lang="en">Handle too large for <em>this</em> PSP → error 6.</p>
+              </div>
+              <div class="anno__row">
+                <pre>LES  DI, ES:PDB_JFN_Pointer
+ADD  DI, BX</pre>
+                <p data-lang="fr">ES:DI → l’octet JFN. Pas encore la SFT.</p>
+                <p data-lang="en">ES:DI → the JFN byte. Not the SFT yet.</p>
+              </div>
+              <div class="anno__row">
+                <pre>CMP  BYTE PTR ES:[DI], -1
+JZ   error_invalid_handle
+MOV  BL, ES:[DI]
+CALL SFFromSFN</pre>
+                <p data-lang="fr"><code>FFh</code> = fermé. Sinon le SFN indexe une chaîne de blocs SFT.</p>
+                <p data-lang="en"><code>FFh</code> = closed. Otherwise the SFN indexes a chain of SFT blocks.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- SFT -->
+      <section class="topic" id="sft">
+        <h2>SFT</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">La vraie fiche, dans le bureau de DOS</span>
+            <span data-lang="en">The real card, in DOS’s office</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le handle n’est qu’un ticket. La fiche complète —
+                nom 8.3, premier cluster, position de lecture, taille,
+                mode d’ouverture — vit dans une table
+                <strong>système</strong>, partagée par tous les
+                programmes : la <em>System File Table</em>.
+              </p>
+              <p>
+                Deux programmes peuvent tenir le même ticket interne
+                (même SFT, <code>sf_ref_count</code> &gt; 1) après un
+                <code>DUP</code> ou un héritage père → fils. Fermer une
+                copie ne ferme le fichier que lorsque le compteur tombe
+                à zéro.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The handle is only a ticket. The full card — 8.3 name,
+                first cluster, read position, size, open mode — lives in
+                a <strong>system</strong> table shared by every program:
+                the System File Table.
+              </p>
+              <p>
+                Two programs can hold the same internal ticket (same SFT,
+                <code>sf_ref_count</code> &gt; 1) after a <code>DUP</code>
+                or parent→child inheritance. Closing one copy only closes
+                the file when the count hits zero.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>sf_firclus relie à la page FAT</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Les SFT sont allouées par <em>blocs chaînés</em>
+                (<code>SFLink</code>, <code>SFCount</code>). Par défaut
+                DOS n’en crée que <code>sf_default_number = 5</code> —
+                une par handle standard. <code>FILES=20</code> dans
+                CONFIG.SYS ajoute d’autres blocs. D’où le message
+                « Too many open files » alors que le JFN a encore de la
+                place : c’est la SFT qui est pleine.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                SFTs are allocated in <em>chained blocks</em>
+                (<code>SFLink</code>, <code>SFCount</code>). By default
+                DOS only creates <code>sf_default_number = 5</code> —
+                one per standard handle. <code>FILES=20</code> in
+                CONFIG.SYS appends more blocks. Hence “Too many open
+                files” while the JFN still has room: the SFT is full.
+              </p>
+            </div>
+            <figure class="illust">
+              <p class="illust__cap">
+                <strong>sf_entry</strong> — champs qui parlent à la FAT
+                · <code>inc/sf.inc</code>
+              </p>
+              <div class="map2">
+                <span class="hd">SFT</span><span></span><span class="hd">FAT / DIR</span>
+                <span>sf_firclus</span><span class="to">→</span><span>DIR_FIRST</span>
+                <span>sf_lstclus / sf_cluspos</span><span class="to">→</span><span>cache pour FNDCLUS</span>
+                <span>sf_position</span><span class="to">→</span><span>octet courant (LSEEK)</span>
+                <span>sf_size</span><span class="to">→</span><span>DIR_SIZE_L/H</span>
+                <span>sf_dirsec + sf_dirpos</span><span class="to">→</span><span>où réécrire l’entrée</span>
+                <span>sf_name[11]</span><span class="to">→</span><span>détecter un fichier déjà effacé</span>
+                <span>sf_devptr</span><span class="to">→</span><span>DPB (ou en-tête device)</span>
+              </div>
+            </figure>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>SFFromSFN · sf_busy = −1</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>SFFromSFN</code> ne fait pas
+                <code>SFT[BX]</code> : il soustrait <code>SFCount</code>
+                à chaque bloc jusqu’à tomber dans le bon, puis
+                <code>BX × SIZE sf_entry + SFTable</code>. Fin de chaîne :
+                <code>SFLink.offset = −1</code>.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>SFFromSFN</code> is not <code>SFT[BX]</code>: it
+                subtracts <code>SFCount</code> at each block until it
+                lands in the right one, then
+                <code>BX × SIZE sf_entry + SFTable</code>. End of chain:
+                <code>SFLink.offset = −1</code>.
+              </p>
+            </div>
+            <p class="illust__cap">inc/sf.inc · dos/util.asm</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>sf_busy  EQU  -1
+; SFNFree: MOV sf_ref_count, -1</pre>
+                <p data-lang="fr">Occupation en cours. Un INT 24 pendant OPEN ne doit pas laisser la case « volée » pour toujours : on la récupère si UID/PID correspondent.</p>
+                <p data-lang="en">Allocation in progress. An INT 24 during OPEN must not leave the slot “stolen” forever: it is reclaimed if UID/PID match.</p>
+              </div>
+              <div class="anno__row">
+                <pre>sf_isfcb EQU 1000_0000_0000_0000b
+; bit 15 de sf_mode</pre>
+                <p data-lang="fr">Cette SFT a été ouverte via l’API FCB, pas via un handle.</p>
+                <p data-lang="en">This SFT was opened through the FCB API, not a handle.</p>
+              </div>
+              <div class="anno__row">
+                <pre>devid_device EQU 80h   ; sf_flags bit 7
+sf_devptr → device header
+  sinon → DPB</pre>
+                <p data-lang="fr">Même SFT pour un fichier disque et pour <code>CON</code>. Le bit 7 décide quelle branche <code>DOS_Read</code> prend.</p>
+                <p data-lang="en">The same SFT type serves a disk file and <code>CON</code>. Bit 7 decides which branch <code>DOS_Read</code> takes.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- OPEN -->
+      <section class="topic" id="open">
+        <h2>OPEN · INT 21h AH=3Dh</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Réserver une case, puis remplir la fiche</span>
+            <span data-lang="en">Reserve a slot, then fill in the card</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Ouvrir, ce n’est pas encore lire. DOS cherche le nom dans
+                les répertoires (ceux de la page FAT), réserve une SFT et
+                un handle, copie le premier cluster sur la fiche, et rend
+                le numéro. Si le nom n’existe pas : erreur 2. Si plus de
+                cases : erreur 4.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Opening is not reading yet. DOS looks up the name in the
+                directories (the FAT page), reserves an SFT and a handle,
+                copies the first cluster onto the card, and returns the
+                number. If the name does not exist: error 2. If no slots
+                left: error 4.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>Access + sharing dans AL</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Le bas de <code>AL</code> est le mode d’accès
+                (<code>filemode.inc</code>) : 0 lecture, 1 écriture,
+                2 les deux. Le haut est le partage (DOS&nbsp;3+) :
+                compatibilité, deny-write, deny-none… Le bit
+                <code>80h</code> signifie « ne pas hériter au fils »
+                (<code>sf_no_inherit</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The low nibble of <code>AL</code> is the access mode
+                (<code>filemode.inc</code>): 0 read, 1 write, 2 both.
+                The high nibble is sharing (DOS&nbsp;3+): compatibility,
+                deny-write, deny-none… Bit <code>80h</code> means
+                “do not inherit to the child”
+                (<code>sf_no_inherit</code>).
+              </p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>AL</th>
+                    <th>Constante</th>
+                    <th data-lang="fr">Sens</th>
+                    <th data-lang="en">Meaning</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>00</code></td><td><code>OPEN_FOR_READ</code></td><td data-lang="fr">Lire</td><td data-lang="en">Read</td></tr>
+                  <tr><td><code>01</code></td><td><code>OPEN_FOR_WRITE</code></td><td data-lang="fr">Écrire</td><td data-lang="en">Write</td></tr>
+                  <tr><td><code>02</code></td><td><code>OPEN_FOR_BOTH</code></td><td data-lang="fr">Les deux</td><td data-lang="en">Both</td></tr>
+                  <tr><td><code>03</code></td><td><code>EXEC_OPEN</code></td><td data-lang="fr">Ouvert par EXEC</td><td data-lang="en">Opened by EXEC</td></tr>
+                  <tr><td><code>x0</code></td><td><code>SHARING_COMPAT</code></td><td>DOS 2</td><td>DOS 2</td></tr>
+                  <tr><td><code>x4</code></td><td><code>SHARING_DENY_NONE</code></td><td>r/w partagés</td><td>shared r/w</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>$Open · AccessFile</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>$CREATE</code> et <code>$Open</code> partagent le
+                même prologue <code>AccessFile</code> dans
+                <code>dos/file.asm</code>. Seul le pointeur dans CX
+                change (<code>DOS_Open</code> vs
+                <code>DOS_Create</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>$CREATE</code> and <code>$Open</code> share the
+                same <code>AccessFile</code> prologue in
+                <code>dos/file.asm</code>. Only the pointer in CX
+                changes (<code>DOS_Open</code> vs
+                <code>DOS_Create</code>).
+              </p>
+            </div>
+            <p class="illust__cap">dos/file.asm — AccessFile</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>EnterCrit critSFT
+call  SFNFree          ; BX = SFN, ES:DI = SFT
+LeaveCrit critSFT</pre>
+                <p data-lang="fr">Section critique mémoire des SFT. Pas de course avec un autre open.</p>
+                <p data-lang="en">SFT memory critical section. No race with another open.</p>
+              </div>
+              <div class="anno__row">
+                <pre>invoke JFNFree         ; BX = handle, ES:DI = slot
+MOV   ES:[DI], BL      ; JFN ← SFN  (verrouillé tôt)</pre>
+                <p data-lang="fr">Le handle est occupé <em>avant</em> TransPath, pour qu’un autre thread ne le reprenne pas.</p>
+                <p data-lang="en">The handle is taken <em>before</em> TransPath, so another thread cannot steal it.</p>
+              </div>
+              <div class="anno__row">
+                <pre>invoke TransPath
+CALL  BX               ; DOS_Open / DOS_Create
+MOV   [SI].sf_ref_count, 1</pre>
+                <p data-lang="fr">Chemin canonique (« d:/… »), puis remplissage. Succès : plus busy (−1) mais référencé (1).</p>
+                <p data-lang="en">Canonical path (“d:/…”), then fill-in. Success: no longer busy (−1) but referenced (1).</p>
+              </div>
+              <div class="anno__row">
+                <pre>OpenE:
+MOV  [SI.SF_Ref_Count], 0
+MOV  BYTE PTR [pJFN], 0FFh</pre>
+                <p data-lang="fr">Échec : on rend les deux cases. Sauf IFS / open étendu (paramètre invalide) où le handle est parfois gardé.</p>
+                <p data-lang="en">Failure: both slots are released. Except IFS / extended open (invalid parameter), where the handle is sometimes kept.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- READ -->
+      <section class="topic" id="lire">
+        <h2>
+          <span data-lang="fr">Lire, écrire, se positionner</span>
+          <span data-lang="en">Read, write, seek</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">DOS se souvient de la page où vous en étiez</span>
+            <span data-lang="en">DOS remembers which page you were on</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Vous dites « lis 512 octets du handle 5 ». DOS sait déjà
+                où vous vous êtes arrêtés la dernière fois
+                (<code>sf_position</code>), retrouve le bon cluster, copie
+                les octets dans votre tampon, et avance le signet. Écrire
+                fait la même promenade, puis peut
+                <a href="fat.html#cycle"><code>ALLOCATE</code></a> un
+                cluster de plus.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                You say “read 512 bytes from handle 5”. DOS already knows
+                where you left off (<code>sf_position</code>), finds the
+                right cluster, copies bytes into your buffer, and moves
+                the bookmark. A write takes the same walk, then may
+                <a href="fat.html#cycle"><code>ALLOCATE</code></a> one
+                more cluster.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>sf_lstclus, le raccourci</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Suivre la FAT depuis le cluster&nbsp;2 à chaque
+                <code>READ</code> serait cruel. La SFT retient le dernier
+                cluster visité (<code>sf_lstclus</code>) et son index
+                dans le fichier (<code>sf_cluspos</code>). Si vous
+                reculez (LSEEK vers le début), DOS jette le cache et
+                repart de <code>sf_firclus</code>.
+              </p>
+              <p>
+                <code>LSEEK</code> (<code>AH=42h</code>) ne touche pas le
+                disque : il ne fait que recaler
+                <code>sf_position</code> — début, courant, ou fin
+                (<code>sf_size</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Walking the FAT from cluster&nbsp;2 on every
+                <code>READ</code> would be cruel. The SFT remembers the
+                last cluster visited (<code>sf_lstclus</code>) and its
+                index in the file (<code>sf_cluspos</code>). If you seek
+                backwards, DOS drops the cache and restarts from
+                <code>sf_firclus</code>.
+              </p>
+              <p>
+                <code>LSEEK</code> (<code>AH=42h</code>) does not touch
+                the disk: it only resets <code>sf_position</code> —
+                start, current, or end (<code>sf_size</code>).
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>$READ · FNDCLUS</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/handle.asm — $READ</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>MOV  SI, OFFSET DOS_Read
+call pJFNFromHandle
+call CheckOwner
+MOV  ThisSFT, ES:DI
+CALL Align_Buffer      ; DMAAdd
+CALL SI                ; DOS_Read
+MOV  AX, CX            ; octets transférés</pre>
+                <p data-lang="fr">$WRITE est le même squelette, SI = DOS_Write. Align_Buffer décale DS:DX sur une frontière de paragraphe (commentaire : « BAD SPOT FOR 286 »).</p>
+                <p data-lang="en">$WRITE is the same skeleton, SI = DOS_Write. Align_Buffer slides DS:DX to a paragraph boundary (comment: “BAD SPOT FOR 286”).</p>
+              </div>
+            </div>
+            <p class="illust__cap" style="margin-top:0.85rem">dos/rom.asm — FNDCLUS</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>LES  DI, [THISSFT]
+MOV  BX, ES:[DI.sf_lstclus]
+MOV  DX, ES:[DI.sf_cluspos]
+OR   BX, BX
+JZ   NOCLUS            ; fichier encore vide</pre>
+                <p data-lang="fr">Pas de cluster ? CX est ajusté, on sort. C’est le cas juste après CREATE, avant la première écriture.</p>
+                <p data-lang="en">No cluster yet? CX is adjusted and we return. That is CREATE, before the first write.</p>
+              </div>
+              <div class="anno__row">
+                <pre>SUB  CX, DX
+JNB  FINDIT
+; reculé : reset
+MOV  BX, ES:[DI.sf_firclus]</pre>
+                <p data-lang="fr">Si le cluster demandé est <em>avant</em> le cache, on recommence au début de la chaîne.</p>
+                <p data-lang="en">If the requested cluster is <em>before</em> the cache, restart at the head of the chain.</p>
+              </div>
+              <div class="anno__row">
+                <pre>SKPCLP:
+invoke UNPACK
+invoke IsEOF
+XCHG BX, DI
+INC  DX
+LOOP SKPCLP</pre>
+                <p data-lang="fr">La promenade de la page FAT, avec le compteur de clusters à sauter dans CX.</p>
+                <p data-lang="en">The walk from the FAT page, with the cluster-skip count in CX.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- CLOSE -->
+      <section class="topic" id="close">
+        <h2>CLOSE · INT 21h AH=3Eh</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Rendre le ticket, ranger la fiche</span>
+            <span data-lang="en">Hand back the ticket, file the card</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Fermer, c’est dire à DOS : je n’ai plus besoin du numéro
+                5. Le ticket redevient libre. Si personne d’autre ne
+                tient la fiche, DOS écrit sur le disque la nouvelle
+                taille et la date, et libère la SFT.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Closing means telling DOS: I no longer need number 5.
+                The ticket becomes free. If nobody else holds the card,
+                DOS writes the new size and date to disk, and frees the
+                SFT.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">Le handle meurt avant la SFT</span>
+            <span data-lang="en">The handle dies before the SFT</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>$Close</code> écrit <code>FFh</code> dans le JFN
+                <em>puis</em> appelle <code>DOS_CLOSE</code>. Le
+                commentaire est explicite : même si la mise à jour du
+                répertoire échoue, le handle reste fermé. On ne peut pas
+                « réessayer » avec le même 5 — il faudrait rouvrir.
+              </p>
+              <p>
+                <code>$Commit</code> (<code>AH=68h</code>) flush les
+                tampons sans rendre le handle. Un commentaire
+                <code>BUGBUG</code> de JGL doute qu’il mette vraiment à
+                jour l’entrée de répertoire.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>$Close</code> writes <code>FFh</code> into the JFN
+                <em>then</em> calls <code>DOS_CLOSE</code>. The comment
+                is explicit: even if the directory update fails, the
+                handle stays closed. You cannot “retry” with the same 5 —
+                you would have to reopen.
+              </p>
+              <p>
+                <code>$Commit</code> (<code>AH=68h</code>) flushes
+                buffers without releasing the handle. A
+                <code>BUGBUG</code> comment by JGL doubts that it really
+                updates the directory entry.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>$Close · le correctif Multiplan</span>
+          </summary>
+          <div class="level-body">
+            <p class="illust__cap">dos/handle.asm — $Close</p>
+            <div class="anno">
+              <div class="anno__row">
+                <pre>call CheckOwner
+CMP  ES:[DI].sf_ref_count, 1
+JZ   FreeJFN
+; sauf sharing_net_fcb à grand ref</pre>
+                <p data-lang="fr">On libère le JFN si la SFT va mourir, ou toujours sauf FCB réseau encore partagé.</p>
+                <p data-lang="en">Free the JFN if the SFT is about to die, or always except a still-shared net FCB.</p>
+              </div>
+              <div class="anno__row">
+                <pre>call pJFNFromHandle
+MOV  BYTE PTR ES:[DI], 0FFh
+invoke DOS_Close
+MOV  AH, close          ; « Bogus multiplan fix »
+transfer Sys_Ret_OK</pre>
+                <p data-lang="fr">L’en-tête du fichier le dit : Jeff Harbers / Multiplan lisent AX après un CLOSE réussi, alors que la doc promet qu’AX est indéfini. DOS 6 continue de mentir gentiment.</p>
+                <p data-lang="en">The file header says it: Jeff Harbers / Multiplan read AX after a successful CLOSE, even though the docs promise AX is undefined. DOS 6 still politely lies.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- FCB -->
+      <section class="topic" id="fcb">
+        <h2>FCB</h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">L’ancienne façon : le programme garde la fiche</span>
+            <span data-lang="en">The old way: the program holds the card</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Avant les handles (DOS&nbsp;2), le programme remplissait
+                lui-même un <em>File Control Block</em> de 37 octets :
+                lecteur, nom 8.3, taille d’enregistrement, numéro
+                d’enregistrement. DOS n’avait pas de ticket à rendre —
+                la fiche était <em>chez vous</em>, dans votre PSP
+                (<code>PDB_FCB1</code>, <code>PDB_FCB2</code>) ou sur
+                votre pile.
+              </p>
+              <p>
+                MS-DOS&nbsp;6 sait encore le faire. Beaucoup de vieux
+                .COM s’en servent. C’est pour cela que le PSP réserve
+                toujours de la place pour deux FCB par défaut.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Before handles (DOS&nbsp;2), the program itself filled a
+                37-byte File Control Block: drive, 8.3 name, record
+                size, record number. DOS had no ticket to return — the
+                card lived <em>in your program</em>, in your PSP
+                (<code>PDB_FCB1</code>, <code>PDB_FCB2</code>) or on
+                your stack.
+              </p>
+              <p>
+                MS-DOS&nbsp;6 still knows how. Plenty of old .COM files
+                use it. That is why the PSP still reserves space for two
+                default FCBs.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span data-lang="fr">En coulisse, une SFT quand même</span>
+            <span data-lang="en">Behind the curtain, an SFT anyway</span>
+          </summary>
+          <div class="level-body">
+            <div class="compare">
+              <article>
+                <h3>Handle</h3>
+                <p data-lang="fr">1 octet dans le PSP. La vérité est dans la SFT noyau. On peut hériter, dupliquer, protéger.</p>
+                <p data-lang="en">1 byte in the PSP. The truth is in the kernel SFT. You can inherit, duplicate, protect.</p>
+              </article>
+              <article>
+                <h3>FCB</h3>
+                <p data-lang="fr">37 octets chez l’utilisateur. DOS régénère une SFT à chaque appel (<code>FCBRegen</code>, <code>SFTFromFCB</code>) et y pose le bit <code>sf_isfcb</code>.</p>
+                <p data-lang="en">37 bytes in user space. DOS rebuilds an SFT on every call (<code>FCBRegen</code>, <code>SFTFromFCB</code>) and sets <code>sf_isfcb</code>.</p>
+              </article>
+            </div>
+            <p data-lang="fr">
+              Les 8 octets « réservés » du FCB (marqués CAVEAT PROGRAMMER
+              dans <code>cpmfcb.inc</code>) cachent assez d’état pour
+              reconnecter la SFT. Un programme qui les écrase casse
+              l’I/O — d’où l’avertissement.
+            </p>
+            <p data-lang="en">
+              The 8 “reserved” FCB bytes (marked CAVEAT PROGRAMMER in
+              <code>cpmfcb.inc</code>) hide enough state to reconnect the
+              SFT. A program that overwrites them breaks I/O — hence the
+              warning.
+            </p>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>« Brain damaged programs »</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                L’en-tête de <code>fcbio.asm</code> (MZ, décembre 1983)
+                est un des plus savoureux du dépôt : certains programmes
+                ferment le même FCB plusieurs fois ; d’autres écrivent
+                dans un FCB déjà fermé. DOS&nbsp;6 rend toujours OK sur
+                un close répété, et EOF sur un I/O post-close.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                The header of <code>fcbio.asm</code> (MZ, December 1983)
+                is one of the tastiest in the tree: some programs close
+                the same FCB more than once; others write to an already
+                closed FCB. DOS&nbsp;6 always returns OK on a repeated
+                close, and EOF on post-close I/O.
+              </p>
+            </div>
+            <figure class="source">
+              <figcaption>dos/fcbio.asm — historique</figcaption>
+              <pre><code>; MZ 15 Dec 1983 Brain damaged programs close FCBs multiple
+;                times.  Change so successive closes work by
+;                always returning OK.  Also, detect I/O to
+;                already closed FCB and return EOF.
+; MZ 16 Jan 1984 More braindamage.  Need to separate info
+;                out of sft into FCB for reconnection</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <!-- stdio -->
+      <section class="topic" id="stdio">
+        <h2>
+          <span data-lang="fr">Les cinq premiers handles</span>
+          <span data-lang="en">The first five handles</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span>STDIN STDOUT STDERR AUX PRN</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Tout programme démarre déjà avec cinq tickets.
+                C’est pour cela que le premier fichier que <em>vous</em>
+                ouvrez reçoit en général le numéro&nbsp;5 — et que
+                <code>ECHO hello</code> n’a pas besoin d’ouvrir
+                l’écran.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Every program already starts with five tickets.
+                That is why the first file <em>you</em> open is usually
+                number&nbsp;5 — and why <code>ECHO hello</code> does not
+                need to open the screen.
+              </p>
+            </div>
+            <div class="std-handles">
+              <div><strong>0</strong>STDIN<br><code>CON</code></div>
+              <div><strong>1</strong>STDOUT<br><code>CON</code></div>
+              <div><strong>2</strong>STDERR<br><code>CON</code></div>
+              <div><strong>3</strong>STDAUX<br><code>AUX</code></div>
+              <div><strong>4</strong>STDPRN<br><code>PRN</code></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>devid_device · ATTR_DEVICE</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Ces cinq-là ne pointent souvent vers aucun cluster :
+                <code>sf_flags</code> a le bit
+                <code>devid_device</code> (80h), et
+                <code>sf_devptr</code> vise l’en-tête du pilote
+                caractère. C’est le même bit
+                <code>ATTR_DEVICE</code> que <code>GETPATH</code> pose
+                en mémoire — jamais sur le disque (voir
+                <a href="fat.html#repertoire">FAT · attributs</a>).
+              </p>
+              <p>
+                Rediriger <code>&gt; FICHIER.TXT</code>, c’est fermer
+                le handle&nbsp;1 et le faire pointer vers une SFT
+                disque. COMMAND.COM le fait avant d’exécuter la ligne.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Those five often point at no cluster at all:
+                <code>sf_flags</code> has <code>devid_device</code>
+                (80h), and <code>sf_devptr</code> aims at the character
+                driver header. That is the same
+                <code>ATTR_DEVICE</code> bit <code>GETPATH</code> sets
+                in memory — never on disk (see
+                <a href="fat.html#repertoire">FAT · attributes</a>).
+              </p>
+              <p>
+                Redirecting <code>&gt; FILE.TXT</code> is closing
+                handle&nbsp;1 and aiming it at a disk SFT. COMMAND.COM
+                does that before running the line.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>filemode.inc</span>
+          </summary>
+          <div class="level-body">
+            <figure class="source">
+              <figcaption>inc/filemode.inc</figcaption>
+              <pre><code>STDIN   equ     0
+STDOUT  equ     1
+STDERR  equ     2
+STDAUX  equ     3
+STDPRN  equ     4
+
+devid_device        EQU 80h
+devid_device_con_in EQU 01h
+devid_device_con_out EQU 02h
+devid_device_null   EQU 04h</code></pre>
+            </figure>
+          </div>
+        </details>
+      </section>
+
+      <!-- Dup -->
+      <section class="topic" id="dup">
+        <h2>
+          <span data-lang="fr">Dup, héritage, FILES=</span>
+          <span data-lang="en">Dup, inherit, FILES=</span>
+        </h2>
+
+        <details class="level-block" data-level="discovery" open>
+          <summary>
+            <span class="badge" data-lang="fr">Découverte</span>
+            <span class="badge" data-lang="en">Discovery</span>
+            <span data-lang="fr">Photocopier un ticket</span>
+            <span data-lang="en">Photocopying a ticket</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>DUP</code> donne un second numéro pour le même
+                fichier. Les deux partagent la position de lecture.
+                Quand un programme lance un autre programme, le fils
+                reçoit une copie de tous les tickets du père — sauf ceux
+                marqués « ne pas hériter ». C’est ainsi que le fils
+                écrit encore à l’écran sans l’avoir ouvert.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>DUP</code> issues a second number for the same
+                file. Both share the read position. When a program
+                launches another, the child gets a copy of every parent
+                ticket — except those marked “do not inherit”. That is
+                how the child still writes to the screen without opening
+                it.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="intermediate">
+          <summary>
+            <span class="badge" data-lang="fr">Intermédiaire</span>
+            <span class="badge" data-lang="en">Intermediate</span>
+            <span>FILES= · trop de fichiers ouverts</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                Deux plafonds distincts, souvent confondus :
+              </p>
+              <ul>
+                <li>le JFN du processus (20, ou plus via
+                  <code>$ExtHandle</code>) ;</li>
+                <li>la SFT globale (<code>FILES=</code> dans
+                  CONFIG.SYS, 5 par défaut).</li>
+              </ul>
+              <p>
+                Un compilateur qui ouvre 30 fichiers échoue donc parfois
+                alors que son JFN a été agrandi : il manque des SFT.
+                Inversement, 8 processus × 5 handles standard saturent
+                déjà une petite table.
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                Two distinct ceilings, often mixed up:
+              </p>
+              <ul>
+                <li>the process JFN (20, or more via
+                  <code>$ExtHandle</code>);</li>
+                <li>the global SFT (<code>FILES=</code> in CONFIG.SYS,
+                  5 by default).</li>
+              </ul>
+              <p>
+                A compiler that opens 30 files can therefore fail after
+                its JFN was grown: there are not enough SFTs.
+                Conversely, 8 processes × 5 standard handles already
+                fill a small table.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="level-block" data-level="technical">
+          <summary>
+            <span class="badge" data-lang="fr">Technique</span>
+            <span class="badge" data-lang="en">Technical</span>
+            <span>$Dup · $ExtHandle · SHARE</span>
+          </summary>
+          <div class="level-body">
+            <div data-lang="fr">
+              <p>
+                <code>$Dup</code> / <code>$Dup2</code> :
+                <code>JFNFree</code> (ou le handle cible pour Dup2),
+                copie du SFN, <code>INC sf_ref_count</code>.
+                <code>$ExtHandle</code> refuse toute valeur &lt; 20,
+                plafonne à 65534 (65535 est réservé comme marqueur
+                busy). SHARE, s’il est chargé, s’accroche via
+                <code>JShare</code> pour fusionner deux SFT identiques
+                au moment de l’open (<code>ShCol</code>, appelé juste
+                avant le <code>Sys_Ret_OK</code> de
+                <code>$Open</code>).
+              </p>
+            </div>
+            <div data-lang="en">
+              <p>
+                <code>$Dup</code> / <code>$Dup2</code>:
+                <code>JFNFree</code> (or the target handle for Dup2),
+                copy the SFN, <code>INC sf_ref_count</code>.
+                <code>$ExtHandle</code> rejects anything &lt; 20, caps
+                at 65534 (65535 is reserved as the busy marker). SHARE,
+                if loaded, hooks through <code>JShare</code> to collapse
+                two identical SFTs at open time (<code>ShCol</code>,
+                called just before <code>$Open</code>’s
+                <code>Sys_Ret_OK</code>).
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="topic" id="sources">
+        <h2>
+          <span data-lang="fr">Fichiers sources cités</span>
+          <span data-lang="en">Source files cited</span>
+        </h2>
+        <div class="file-index">
+          <span>dos/util.asm<small>pJFNFromHandle, SFFromHandle, SFFromSFN, JFNFree, SFNFree</small></span>
+          <span>dos/file.asm<small>$Open, AccessFile, $Creat, $Extended_Open</small></span>
+          <span>dos/open.asm<small>DOS_Open, Check_Access_AX, SET_SFT_MODE</small></span>
+          <span>dos/handle.asm<small>$Close, $Read, $Write, $LSeek, $Dup, $ExtHandle, $Commit</small></span>
+          <span>dos/close.asm<small>DOS_CLOSE, DOS_COMMIT, FREE_SFT</small></span>
+          <span>dos/rom.asm<small>FNDCLUS → UNPACK / IsEOF (lien FAT)</small></span>
+          <span>dos/fcbio.asm<small>API FCB, FCBRegen, closes répétés</small></span>
+          <span>inc/sf.inc<small>SF, sf_entry, sf_busy, devid_*</small></span>
+          <span>inc/pdb.inc<small>PSP, PDB_JFN_Table, FilPerProc = 20</small></span>
+          <span>inc/filemode.inc<small>STDIN…PRN, ACCESS / SHARING</small></span>
+          <span>inc/cpmfcb.inc<small>sys_fcb, octets réservés</small></span>
+          <span>dos/share.asm · lock.asm<small>JShare, verrous</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p data-lang="fr">
+        Suite de la page FAT. Extraire un handle jusqu’au cluster :
+        <code>JFN → SFN → sf_firclus → UNPACK</code>.
+        Extraits MS-DOS&nbsp;6 © Microsoft Corporation 1991.
+      </p>
+      <p data-lang="en">
+        Sequel to the FAT page. A handle down to the cluster:
+        <code>JFN → SFN → sf_firclus → UNPACK</code>.
+        Excerpts from MS-DOS&nbsp;6 © Microsoft Corporation 1991.
+      </p>
+    </div>
+  </footer>
+  <script src="js/app.js"></script>
+  <script src="js/trace.js"></script>
+</body>
+</html>
