@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sources — Comprendre MS-DOS 6</title>
+  <meta name="description" content="Explorateur du code source MS-DOS 6, avec coloration syntaxique.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body class="source-page">
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html">
+        <strong data-lang="fr">Comprendre MS-DOS 6</strong>
+        <strong data-lang="en">Understanding MS-DOS 6</strong>
+        <span data-lang="fr">Lecture commentée du code source</span>
+        <span data-lang="en">A guided reading of the source</span>
+      </a>
+      <nav class="nav">
+        <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+        <a href="source.html" aria-current="page"><span data-lang="fr">Sources</span><span data-lang="en">Sources</span></a>
+        <a href="boot.html">Boot</a>
+        <a href="fat.html">FAT</a>
+        <a href="command.html">COMMAND</a>
+      </nav>
+      <div class="header-controls">
+        <div class="ctrl">
+          <button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button>
+          <button type="button" data-set="lang" data-value="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="src-app">
+    <aside class="src-side" id="src-side">
+      <label class="src-search">
+        <span class="visually-hidden" data-lang="fr">Filtrer</span>
+        <span class="visually-hidden" data-lang="en">Filter</span>
+        <input type="search" id="src-filter" placeholder="bios/sysconf.asm" autocomplete="off">
+      </label>
+      <nav class="src-tree" id="src-tree" aria-label="Arborescence"></nav>
+    </aside>
+    <main id="main" class="src-main">
+      <div class="src-toolbar">
+        <button type="button" class="src-toggle" id="src-toggle" aria-expanded="true">
+          <span data-lang="fr">Arbre</span><span data-lang="en">Tree</span>
+        </button>
+        <ol class="src-crumb" id="src-crumb"></ol>
+        <span class="src-meta" id="src-meta"></span>
+      </div>
+      <div class="src-empty" id="src-empty">
+        <p data-lang="fr">Choisis un fichier dans l’arbre — ou suis un lien depuis la section Sources d’un article.</p>
+        <p data-lang="en">Pick a file in the tree — or follow a link from an article’s Sources section.</p>
+        <p class="hint" data-lang="fr">Racine du dépôt : <code>ms-dos-6-source-code/</code>. Coloration pour ASM, C, en-têtes et includes.</p>
+        <p class="hint" data-lang="en">Repo root: <code>ms-dos-6-source-code/</code>. Highlighting for ASM, C, headers and includes.</p>
+      </div>
+      <div class="src-view" id="src-view" hidden>
+        <pre class="src-gutter" id="src-gutter"></pre>
+        <pre class="src-code" id="src-code"></pre>
+      </div>
+      <p class="src-err" id="src-err" hidden></p>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/source.js"></script>
+</body>
+</html>

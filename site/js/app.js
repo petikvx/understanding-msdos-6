@@ -79,6 +79,9 @@
     var s = document.createElement("script");
     s.src = src.replace(/app\.js(\?.*)?$/, "glossary.js");
     document.head.appendChild(s);
+    var s2 = document.createElement("script");
+    s2.src = src.replace(/app\.js(\?.*)?$/, "source-links.js");
+    document.head.appendChild(s2);
   })();
 
   document.addEventListener("click", function (ev) {

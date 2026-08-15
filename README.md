@@ -5,7 +5,8 @@
 Un guide statique, bilingue (FR / EN), qui explique le système depuis ses sources : noyau, boot, drivers, et tout `cmd/`. Pas un manuel utilisateur. Pas une histoire orale. Le texte s’appuie sur des chemins, des structures et des extraits réels (`UNPACK`, `COMTAB`, `Disk_Header`, `our_version = 0AA02h`…).
 
 - **Guide :** ouvrir [`site/index.html`](site/index.html) — ou la [page racine](index.html) qui y pointe.
-- **Sources :** [`ms-dos-6-source-code/`](ms-dos-6-source-code/)
+- **Explorateur :** [`site/source.html`](site/source.html) — arbre + coloration (ex. [`bios/sysconf.asm`](site/source.html?f=bios/sysconf.asm)).
+- **Sources brutes :** [`ms-dos-6-source-code/`](ms-dos-6-source-code/)
 - **Dépôt :** [github.com/petikvx/understanding-msdos-6](https://github.com/petikvx/understanding-msdos-6)
 
 ---
