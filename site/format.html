@@ -72,8 +72,8 @@
           <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
             <span>safe.inc · switch_s</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Les modules <code>safe.inc</code>, <code>safedef.inc</code>, <code>switch_s.asm</code> implémentent la sauvegarde et le switch /S (système). <code>forlabel.asm</code> écrit le libellé 11 caractères dans le BPB étendu (signature 41).</p></div>
-            <div data-lang="en"><p>Modules <code>safe.inc</code>, <code>safedef.inc</code>, <code>switch_s.asm</code> implement the save and the /S (system) switch. <code>forlabel.asm</code> writes the 11-character label into the extended BPB (signature 41).</p></div>
+            <div data-lang="fr"><p>Les modules <code>safe.inc</code> / <code>safedef.inc</code> gèrent la photo pour UNFORMAT — rien à voir avec <code>/S</code>. <code>forlabel.asm</code> écrit le libellé 11 caractères dans le BPB étendu (signature 41).</p></div>
+            <div data-lang="en"><p><code>safe.inc</code> / <code>safedef.inc</code> handle the snapshot for UNFORMAT — unrelated to <code>/S</code>. <code>forlabel.asm</code> writes the 11-character label into the extended BPB (signature 41).</p></div>
           </div>
         </details>
         <details class="level-block" data-level="technical">
@@ -122,29 +122,63 @@
       </section>
 
       <section class="topic" id="sys">
-        <h2>/S</h2>
+        <h2>FORMAT A: /S — une disquette qui démarre</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
-            <span data-lang="fr">Rendre le disque amorçable</span>
-            <span data-lang="en">Make the disk bootable</span></summary>
+            <span>/S = System</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>/S copie IO.SYS, MSDOS.SYS, COMMAND.COM et pose le secteur de boot. Les fichiers système doivent être les premiers clusters, contigus — sinon <a href="boot.html">msboot</a> ne les charge pas.</p></div>
-            <div data-lang="en"><p>/S copies IO.SYS, MSDOS.SYS, COMMAND.COM and plants the boot sector. The system files must be the first clusters, contiguous — otherwise <a href="boot.html">msboot</a> will not load them.</p></div>
+            <div data-lang="fr">
+              <p><code>FORMAT</code> tout seul prépare un volume vide (boot + FAT + racine). Au prochain allumage, le BIOS lit le secteur 0, ne trouve pas le DOS, et s’arrête : « Non-System disk ».</p>
+              <p><code>/S</code> ajoute <em>après</em> ce décor les trois fichiers sans lesquels il n’y a pas d’invite :</p>
+              <ol>
+                <li><strong>IO.SYS</strong> — le BIOS disque + SYSINIT (premier fichier de la racine).</li>
+                <li><strong>MSDOS.SYS</strong> — le noyau (INT 21h, FAT…).</li>
+                <li><strong>COMMAND.COM</strong> — l’invite <code>A&gt;</code>.</li>
+              </ol>
+              <p>FORMAT les prend sur le disque d’où tu lances la commande (souvent C:), les écrit au <em>début</em> de la zone données de la cible, et pose un secteur de boot qui sait les trouver. Tu obtiens une disquette de dépannage : boot sur A:, invite, sans Windows ni disque dur.</p>
+            </div>
+            <div data-lang="en">
+              <p>Plain <code>FORMAT</code> prepares an empty volume (boot + FAT + root). At next power-on the BIOS reads sector 0, does not find DOS, and stops: “Non-System disk”.</p>
+              <p><code>/S</code> then adds the three files without which there is no prompt:</p>
+              <ol>
+                <li><strong>IO.SYS</strong> — disk BIOS + SYSINIT (first file in the root).</li>
+                <li><strong>MSDOS.SYS</strong> — the kernel (INT 21h, FAT…).</li>
+                <li><strong>COMMAND.COM</strong> — the <code>A&gt;</code> prompt.</li>
+              </ol>
+              <p>FORMAT takes them from the disk you launched it from (often C:), writes them at the <em>start</em> of the target data area, and plants a boot sector that knows how to find them. You get a rescue floppy: boot from A:, prompt, no Windows or hard disk required.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
           <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
-            <span>cmd/sys</span></summary>
+            <span>pourquoi « premiers clusters, collés »</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>La commande <code>SYS</code> seule fait la même copie sans reformater. Elle échoue si la place en tête est prise par un fichier ordinaire — d’où « No room for system files ».</p></div>
-            <div data-lang="en"><p>The <code>SYS</code> command alone does the same copy without reformatting. It fails if the front space is taken by an ordinary file — hence “No room for system files”.</p></div>
+            <div data-lang="fr">
+              <p>Le secteur de boot (512 octets) est trop petit pour marcher toute la FAT. Il fait une seule chose : lire les <strong>3 premiers secteurs d’IO.SYS</strong>, en supposant qu’ils commencent au premier cluster de données et se suivent sur le disque. Ensuite ce bout d’IO.SYS (MSLOAD) sait suivre la FAT pour le reste.</p>
+              <p>Si un fichier ordinaire occupe déjà le début, IO.SYS irait plus loin, fragmenté : le boot ne le trouverait pas. D’où « No room for system files ». <code>FORMAT /S</code> n’a pas ce problème : le volume vient d’être vidé, la place en tête est libre.</p>
+              <p><code>SYS A:</code> (page <a href="attrib.html#sys">ATTRIB · SYS</a>) fait la <em>même copie</em> sans reformater — utile pour rendre amorçable un disque déjà plein de fichiers, à condition que le début soit encore libre. Sinon SYS échoue, ou déplace des clusters (c’est plus risqué).</p>
+              <p>COMMAND.COM, lui, n’a pas besoin d’être collé : SYSINIT le charge par son nom, plus tard. On le copie quand même pour que l’invite existe.</p>
+            </div>
+            <div data-lang="en">
+              <p>The boot sector (512 bytes) is too small to walk the whole FAT. It does one thing: read the <strong>first 3 sectors of IO.SYS</strong>, assuming they start at the first data cluster and sit next to each other on disk. Then that stub of IO.SYS (MSLOAD) can follow the FAT for the rest.</p>
+              <p>If an ordinary file already occupies the front, IO.SYS would land further out, fragmented: the boot would not find it. Hence “No room for system files”. <code>FORMAT /S</code> does not have that problem: the volume was just emptied, the front is free.</p>
+              <p><code>SYS A:</code> (<a href="attrib.html#sys">ATTRIB · SYS</a> page) does the <em>same copy</em> without reformatting — useful to make a disk that already has files bootable, if the front is still free. Otherwise SYS fails, or moves clusters (riskier).</p>
+              <p>COMMAND.COM need not be contiguous: SYSINIT loads it by name, later. We copy it anyway so the prompt exists.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="technical">
           <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
             <span>switch_s.asm</span></summary>
           <div class="level-body">
-            <p class="note"><code>IBMLOADSIZE</code> encore : SYS doit écrire au moins 3 secteurs consécutifs pour IO.SYS avant de s’arrêter.</p>
+            <pre><code>; cmd/format/switch_s.asm
+; Copy IO.SYS, MSDOS.SYS, COMMAND.COM, and DBLSPACE.BIN
+; (if present) into the newly formatted disk.
+    call  Get_Command_Path    ; COMSPEC, not a hard-coded C:\
+    call  Get_Command         ; read COMMAND.COM into the TPA
+    ; … then Bios / Dos the same way, write at cluster 2 …</code></pre>
+            <p class="note" data-lang="fr"><code>IBMLOADSIZE = 3</code> (<code>inc/bootform.inc</code>) : le boot et FORMAT doivent tomber d’accord sur « 3 secteurs ». M029 : ne plus supposer que <code>COMSPEC=</code> est un chemin absolu — on reconstruit <code>COMMAND.COM</code> dans un autre tampon. Si DoubleSpace est chargé, <code>DBLSPACE.BIN</code> part aussi, pour qu’un volume comprimé puisse démarrer.</p>
+            <p class="note" data-lang="en"><code>IBMLOADSIZE = 3</code> (<code>inc/bootform.inc</code>): boot and FORMAT must agree on “3 sectors”. M029: stop assuming <code>COMSPEC=</code> is an absolute path — rebuild <code>COMMAND.COM</code> in another buffer. If DoubleSpace is loaded, <code>DBLSPACE.BIN</code> goes too, so a compressed volume can boot.</p>
           </div>
         </details>
       </section>
