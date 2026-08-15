@@ -3,6 +3,7 @@
    - Langue : html.lang-fr | html.lang-en  (les nœuds [data-lang] sont masqués)
    - Niveau : html[data-level=discovery|intermediate|technical|all]
    - Chaque bloc de niveau est un <details class="level-block" data-level="…">
+   - Glossaire au survol : .term > .term__tip (une langue, le parent data-lang filtre)
 */
 
 :root {
@@ -320,6 +321,72 @@ p:last-child { margin-bottom: 0; }
 .content li { margin: 0.2rem 0; }
 
 a { color: var(--accent); }
+
+/* ——— Glossaire au survol ——— */
+
+.term {
+  position: relative;
+  border-bottom: 1px dotted color-mix(in srgb, var(--accent) 70%, var(--ink));
+  cursor: help;
+  text-decoration: none;
+  font-style: inherit;
+}
+
+a.term:hover {
+  border-bottom-style: solid;
+}
+
+.term__tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.4rem);
+  transform: translateX(-50%);
+  z-index: 50;
+  width: max-content;
+  max-width: min(18.5rem, 72vw);
+  padding: 0.5rem 0.65rem;
+  background: var(--ink);
+  color: var(--bg-elev);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.term__tip::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: var(--ink);
+}
+
+.term__tip code {
+  background: transparent;
+  color: var(--accent-line);
+  padding: 0;
+}
+
+.term:hover .term__tip,
+.term:focus .term__tip,
+.term:focus-within .term__tip {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term__tip { transition: none; }
+}
 
 /* ——— Blocs de niveau ——— */
 

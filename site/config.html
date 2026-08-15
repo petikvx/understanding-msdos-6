@@ -50,8 +50,8 @@
       <header>
         <p class="kicker">bios/sysconf.asm · sysinit1.asm</p>
         <h1>CONFIG.SYS</h1>
-        <p class="lede" data-lang="fr">Le fichier que SYSINIT lit pour fabriquer <em>votre</em> DOS : combien de SFT (<code>FILES=</code>), quels pilotes, le DOS en HMA ou non. Ce n’est pas COMMAND.COM qui le lit — le noyau n’est même pas encore « fini ».</p>
-        <p class="lede" data-lang="en">The file SYSINIT reads to build <em>your</em> DOS: how many SFTs (<code>FILES=</code>), which drivers, DOS in the HMA or not. COMMAND.COM does not read it — the kernel is not even “finished” yet.</p>
+        <p class="lede" data-lang="fr">Le fichier que <a class="term" href="boot.html" tabindex="0">SYSINIT<span class="term__tip">Dernière phase de l’amorçage, dans IO.SYS : elle lit CONFIG.SYS et pose le DOS, avant COMMAND.COM.</span></a> lit pour fabriquer <em>votre</em> DOS : combien de <a class="term" href="fichiers.html" tabindex="0">SFT<span class="term__tip">System File Table : la table des fichiers ouverts. <code>FILES=</code> fixe sa taille.</span></a> (<code>FILES=</code>), quels pilotes, le DOS en <a class="term" href="himem.html" tabindex="0">HMA<span class="term__tip">High Memory Area : 64&nbsp;Ko juste au-dessus de 1&nbsp;Mo, accessibles seulement si A20 est allumée.</span></a> ou non. Ce n’est pas COMMAND.COM qui le lit — le noyau n’est même pas encore « fini ».</p>
+        <p class="lede" data-lang="en">The file <a class="term" href="boot.html" tabindex="0">SYSINIT<span class="term__tip">Last boot stage, in IO.SYS: it reads CONFIG.SYS and builds DOS, before COMMAND.COM.</span></a> reads to build <em>your</em> DOS: how many <a class="term" href="fichiers.html" tabindex="0">SFTs<span class="term__tip">System File Table: the open-file table. <code>FILES=</code> sets its size.</span></a> (<code>FILES=</code>), which drivers, DOS in the <a class="term" href="himem.html" tabindex="0">HMA<span class="term__tip">High Memory Area: 64&nbsp;KB just above 1&nbsp;MB, visible only when A20 is on.</span></a> or not. COMMAND.COM does not read it — the kernel is not even “finished” yet.</p>
       </header>
 
       <section class="topic" id="doconf">
@@ -64,16 +64,16 @@
             <span data-lang="fr">L’ordre compte, et on relit</span>
             <span data-lang="en">Order matters, and we reread</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>On ne peut pas charger HIMEM après s’être déjà installé en bas. SYSINIT parcourt CONFIG plusieurs fois : d’abord les directives qui décident <em>où</em> vit DOS, ensuite les <code>DEVICE=</code>, puis le reste. D’où les menus multi-config de DOS 6 (<code>MULTI_CONFIG</code>).</p></div>
-            <div data-lang="en"><p>You cannot load HIMEM after already installing low. SYSINIT walks CONFIG several times: first the lines that decide <em>where</em> DOS lives, then <code>DEVICE=</code>, then the rest. Hence DOS 6’s multi-config menus (<code>MULTI_CONFIG</code>).</p></div>
+            <div data-lang="fr"><p>On ne peut pas charger <a class="term" href="himem.html" tabindex="0">HIMEM<span class="term__tip">Pilote <code>HIMEM.SYS</code> : mémoire au-delà de 1&nbsp;Mo (XMS), ligne A20, HMA. Sans lui, <code>DOS=HIGH</code> laisse le noyau en bas.</span></a> après s’être déjà installé en bas. SYSINIT parcourt CONFIG plusieurs fois : d’abord les directives qui décident <em>où</em> vit DOS, ensuite les <code>DEVICE=</code>, puis le reste. D’où les menus multi-config de DOS 6 (<dfn class="term" tabindex="0">MULTI_CONFIG<span class="term__tip">Blocs <code>[menu]</code> / <code>[common]</code> : on choisit un CONFIG parmi plusieurs au boot.</span></dfn>).</p></div>
+            <div data-lang="en"><p>You cannot load <a class="term" href="himem.html" tabindex="0">HIMEM<span class="term__tip">The <code>HIMEM.SYS</code> driver: memory past 1&nbsp;MB (XMS), A20 line, HMA. Without it, <code>DOS=HIGH</code> leaves the kernel low.</span></a> after already installing low. SYSINIT walks CONFIG several times: first the lines that decide <em>where</em> DOS lives, then <code>DEVICE=</code>, then the rest. Hence DOS 6’s multi-config menus (<dfn class="term" tabindex="0">MULTI_CONFIG<span class="term__tip"><code>[menu]</code> / <code>[common]</code> blocks: pick one CONFIG among several at boot.</span></dfn>).</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
           <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
             <span>FILES · BUFFERS · LASTDRIVE · INSTALL</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p><code>FILES=</code> agrandit la SFT (page <a href="fichiers.html#dup">Fichiers</a>). <code>BUFFERS=</code> le cache de <code>buf.asm</code>. <code>LASTDRIVE=</code> les CDS. <code>INSTALL=</code> lance un programme via EXEC <em>pendant</em> SYSINIT, avec un environnement volontairement NULL (M067) — pas encore de COMSPEC fiable.</p></div>
-            <div data-lang="en"><p><code>FILES=</code> grows the SFT (<a href="fichiers.html#dup">Files</a> page). <code>BUFFERS=</code> is the <code>buf.asm</code> cache. <code>LASTDRIVE=</code> the CDS. <code>INSTALL=</code> runs a program via EXEC <em>during</em> SYSINIT, with a deliberately NULL environment (M067) — no reliable COMSPEC yet.</p></div>
+            <div data-lang="fr"><p><code>FILES=</code> agrandit la SFT (page <a href="fichiers.html#dup">Fichiers</a>). <code>BUFFERS=</code> le cache de <code>buf.asm</code>. <code>LASTDRIVE=</code> les <a class="term" href="chemins.html" tabindex="0">CDS<span class="term__tip">Current Directory Structure : une entrée par lettre de lecteur (chemin courant, SUBST, JOIN…).</span></a>. <code>INSTALL=</code> lance un programme via <a class="term" href="exec.html" tabindex="0">EXEC<span class="term__tip">INT 21h AH=4Bh : charger et lancer un .COM / .EXE (ou un overlay).</span></a> <em>pendant</em> SYSINIT, avec un environnement volontairement NULL (M067) — pas encore de <dfn class="term" tabindex="0">COMSPEC<span class="term__tip">Variable d’environnement : chemin complet de COMMAND.COM.</span></dfn> fiable.</p></div>
+            <div data-lang="en"><p><code>FILES=</code> grows the SFT (<a href="fichiers.html#dup">Files</a> page). <code>BUFFERS=</code> is the <code>buf.asm</code> cache. <code>LASTDRIVE=</code> the <a class="term" href="chemins.html" tabindex="0">CDS<span class="term__tip">Current Directory Structure: one entry per drive letter (cwd, SUBST, JOIN…).</span></a>. <code>INSTALL=</code> runs a program via <a class="term" href="exec.html" tabindex="0">EXEC<span class="term__tip">INT 21h AH=4Bh: load and run a .COM / .EXE (or an overlay).</span></a> <em>during</em> SYSINIT, with a deliberately NULL environment (M067) — no reliable <dfn class="term" tabindex="0">COMSPEC<span class="term__tip">Environment variable: full path to COMMAND.COM.</span></dfn> yet.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="technical">
@@ -93,16 +93,16 @@
             <span data-lang="fr">Un programme sans PSP</span>
             <span data-lang="en">A program with no PSP</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Un pilote n’est pas FOO.COM. SYSINIT le charge comme <strong>overlay</strong> (<a href="exec.html#exec-fn">$EXEC AL=3</a>) : pas de PSP, pas d’environnement, une adresse et un facteur de reloc. Puis il appelle la stratégie d’init du driver.</p></div>
-            <div data-lang="en"><p>A driver is not FOO.COM. SYSINIT loads it as an <strong>overlay</strong> (<a href="exec.html#exec-fn">$EXEC AL=3</a>): no PSP, no environment, an address and a reloc factor. Then it calls the driver’s init strategy.</p></div>
+            <div data-lang="fr"><p>Un pilote n’est pas FOO.COM. SYSINIT le charge comme <dfn class="term" tabindex="0"><strong>overlay</strong><span class="term__tip">Chargé en mémoire sans devenir un processus : pas d’invite, pas de retour à COMMAND.</span></dfn> (<a href="exec.html#exec-fn">$EXEC AL=3</a>) : pas de <a class="term" href="exec.html" tabindex="0">PSP<span class="term__tip">Program Segment Prefix : 256 octets devant chaque programme (ligne de commande, handles, INT 22/23/24).</span></a>, pas d’environnement, une adresse et un facteur de reloc. Puis il appelle la stratégie d’init du driver.</p></div>
+            <div data-lang="en"><p>A driver is not FOO.COM. SYSINIT loads it as an <dfn class="term" tabindex="0"><strong>overlay</strong><span class="term__tip">Loaded into memory without becoming a process: no prompt, no return to COMMAND.</span></dfn> (<a href="exec.html#exec-fn">$EXEC AL=3</a>): no <a class="term" href="exec.html" tabindex="0">PSP<span class="term__tip">Program Segment Prefix: 256 bytes in front of every program (command line, handles, INT 22/23/24).</span></a>, no environment, an address and a reloc factor. Then it calls the driver’s init strategy.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
           <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
             <span>DEVICEHIGH · UMB</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code> : si les UMB sont liées, on essaie de loger le pilote en haut. <code>LieInt12Mem</code> ment à INT 12h pour que le driver croie qu’il n’y a que 640 Ko — sinon certains s’installent trop bas tous seuls.</p></div>
-            <div data-lang="en"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code>: if UMBs are linked, we try to house the driver high. <code>LieInt12Mem</code> lies to INT 12h so the driver thinks there are only 640 KB — otherwise some install themselves too low.</p></div>
+            <div data-lang="fr"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code> : si les <a class="term" href="memoire.html#umb" tabindex="0">UMB<span class="term__tip">Upper Memory Blocks : trous libres entre 640&nbsp;Ko et 1&nbsp;Mo, souvent créés par EMM386.</span></a> sont liées, on essaie de loger le pilote en haut. <code>LieInt12Mem</code> ment à <dfn class="term" tabindex="0">INT 12h<span class="term__tip">Service BIOS : « combien de Ko de mémoire conventionnelle ? » Réponse dans AX, d’habitude 640.</span></dfn> pour que le driver croie qu’il n’y a que 640 Ko — sinon certains s’installent trop bas tous seuls.</p></div>
+            <div data-lang="en"><p><code>GetUMBForDev</code> / <code>SpaceInUMB?</code>: if <a class="term" href="memoire.html#umb" tabindex="0">UMBs<span class="term__tip">Upper Memory Blocks: free holes between 640&nbsp;KB and 1&nbsp;MB, often created by EMM386.</span></a> are linked, we try to house the driver high. <code>LieInt12Mem</code> lies to <dfn class="term" tabindex="0">INT 12h<span class="term__tip">BIOS service: “how many KB of conventional memory?” Answer in AX, usually 640.</span></dfn> so the driver thinks there are only 640 KB — otherwise some install themselves too low.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="technical">
@@ -115,8 +115,8 @@
                 <pre>InitDevLoad / SizeDevice
 ExecDev                 ; $EXEC overlay
 DevSetBreak             ; taille résidente</pre>
-                <p data-lang="fr">Après init, on « casse » l’arène à la taille que le driver a rendue — le reste redevient libre. Même idée que le TSR, sans PSP.</p>
-                <p data-lang="en">After init we “break” the arena at the size the driver returned — the rest is free again. Same idea as a TSR, no PSP.</p>
+                <p data-lang="fr">Après init, on « casse » l’<dfn class="term" tabindex="0">arène<span class="term__tip">Bloc de mémoire DOS (en-tête <code>4Dh</code> / <code>5Ah</code>) : un maillon de la chaîne first/best/last fit.</span></dfn> à la taille que le driver a rendue — le reste redevient libre. Même idée que le <a class="term" href="exec.html" tabindex="0">TSR<span class="term__tip">Terminate and Stay Resident : le programme rend la main mais laisse du code en mémoire.</span></a>, sans PSP.</p>
+                <p data-lang="en">After init we “break” the <dfn class="term" tabindex="0">arena<span class="term__tip">A DOS memory block (header <code>4Dh</code> / <code>5Ah</code>): one link in the first/best/last-fit chain.</span></dfn> at the size the driver returned — the rest is free again. Same idea as a <a class="term" href="exec.html" tabindex="0">TSR<span class="term__tip">Terminate and Stay Resident: the program returns but leaves code in memory.</span></a>, no PSP.</p>
               </div>
             </div>
           </div>
@@ -130,8 +130,8 @@ DevSetBreak             ; taille résidente</pre>
             <span data-lang="fr">Mettre le noyau au-dessus de 1 Mo</span>
             <span data-lang="en">Put the kernel above 1 MB</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>La HMA est le premier segment de 64 Ko au-delà de 1 Mo, visible seulement si la ligne A20 est allumée. HIMEM la donne à DOS ; <code>DOS=HIGH</code> y loge le noyau. <code>UMB</code> enchaîne les trous 640K–1M à l’arène (page <a href="memoire.html#umb">Mémoire</a>).</p></div>
-            <div data-lang="en"><p>The HMA is the first 64 KB segment past 1 MB, visible only if the A20 line is on. HIMEM gives it to DOS; <code>DOS=HIGH</code> parks the kernel there. <code>UMB</code> links the 640K–1M holes into the arena (<a href="memoire.html#umb">Memory</a> page).</p></div>
+            <div data-lang="fr"><p>La HMA est le premier segment de 64 Ko au-delà de 1 Mo, visible seulement si la ligne <dfn class="term" tabindex="0">A20<span class="term__tip">20<sup>e</sup> fil d’adresse. Éteint, le PC boucle à 1&nbsp;Mo comme un 8086 ; allumé, on voit la HMA.</span></dfn> est allumée. HIMEM la donne à DOS ; <code>DOS=HIGH</code> y loge le noyau. <code>UMB</code> enchaîne les trous 640K–1M à l’arène (page <a href="memoire.html#umb">Mémoire</a>).</p></div>
+            <div data-lang="en"><p>The HMA is the first 64 KB segment past 1 MB, visible only if the <dfn class="term" tabindex="0">A20<span class="term__tip">20th address line. Off, the PC wraps at 1&nbsp;MB like an 8086; on, the HMA appears.</span></dfn> line is on. HIMEM gives it to DOS; <code>DOS=HIGH</code> parks the kernel there. <code>UMB</code> links the 640K–1M holes into the arena (<a href="memoire.html#umb">Memory</a> page).</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
