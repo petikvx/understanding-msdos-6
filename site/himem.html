@@ -92,6 +92,12 @@
           <div class="level-body">
             <div data-lang="fr"><p>Sur un 8086, <code>FFFF:0010</code> retombe en <code>0000:0000</code>. Les applis copy-protected testent ça. Sur un 286+, la 21<sup>e</sup> ligne (A20) si elle est à 1 donne plutôt la HMA. HIMEM doit donc parfois <em>éteindre</em> A20 — d’où <code>A20OFF_COUNT</code> dans <a href="int21.html#sortie">LeaveDos</a> et <a href="exec.html">EXEC</a>.</p></div>
             <div data-lang="en"><p>On an 8086, <code>FFFF:0010</code> wraps to <code>0000:0000</code>. Copy-protected apps test that. On a 286+, the 21st line (A20) if high yields the HMA instead. HIMEM must therefore sometimes <em>turn A20 off</em> — hence <code>A20OFF_COUNT</code> in <a href="int21.html#sortie">LeaveDos</a> and <a href="exec.html">EXEC</a>.</p></div>
+            <div class="machine machine-a20">
+              <p class="machine__ctrl">
+                <label><input type="checkbox" id="a20on"> A20</label>
+              </p>
+              <p><code>FFFF:0010</code> → <code id="a20out">0000:0000</code> <span id="a20lab"></span></p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -157,5 +163,6 @@
     <p data-lang="en">Back to the <a href="memoire.html">arena simulator</a>: HIGH_FIRST only makes sense after HIMEM + EMM386.</p>
   </div></footer>
   <script src="js/app.js"></script>
+  <script src="js/a20.js"></script>
 </body>
 </html>

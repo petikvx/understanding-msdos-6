@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EDIT · HELP — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="qbasic.html">QBasic</a>
+      <a href="qbedit.html" aria-current="page">EDIT</a>
+      <a href="aide.html">HELP</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#edit">EDIT.COM</a></li><li><a href="#qhelp">HELP.COM</a></li><li><a href="#ui">UI</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">/EDCOM · /QHELP — le même QBASIC.EXE</p>
+        <h1>EDIT · HELP</h1>
+        <p class="lede" data-lang="fr">Deux minuscules .COM qui relancent QBasic avec un switch. EDIT est l’éditeur (sans RUN). HELP (celui de DOS, <code>help.hlp</code>) est un lecteur d’aide — distinct de <code>cmd/help/HELP.EXE</code> qui spawn <code>/?</code>.</p>
+        <p class="lede" data-lang="en">Two tiny .COM files that relaunch QBasic with a switch. EDIT is the editor (no RUN). HELP (the DOS one, <code>help.hlp</code>) is a help viewer — distinct from <code>cmd/help/HELP.EXE</code> which spawns <code>/?</code>.</p>
+      </header>
+      <section class="topic" id="edit">
+        <h2>EDIT AUTOEXEC.BAT</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>après EDLIN</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Écran plein, menus, souris. C’est QBasic sans l’invite <code>OK</code> : le switch <code>/EDCOM</code> cache l’interpréteur. EDLIN reste dans <code>cmd/edlin/</code> pour les machines trop petites.</p></div>
+            <div data-lang="en"><p>Full screen, menus, mouse. It is QBasic without the <code>OK</code> prompt: the <code>/EDCOM</code> switch hides the interpreter. EDLIN stays in <code>cmd/edlin/</code> for machines that are too small.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>qedit.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>L’éditeur proprement dit : <code>45/qb5/ir/qedit.asm</code> + <code>45/qb5/uq/</code> (fichiers, recherche, fenêtres). Couleurs sauvegardées (warning dans <code>defcolor.c</code>).</p></div>
+            <div data-lang="en"><p>The editor itself: <code>45/qb5/ir/qedit.asm</code> + <code>45/qb5/uq/</code> (files, search, windows). Saved colors (warning in <code>defcolor.c</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>readme</span></summary>
+          <div class="level-body">
+            <p class="note">« editor (calls QBASIC with /EDCOM switch) ». EDIT.COM est un stub ; toute la viande est dans l’EXE.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="qhelp">
+        <h2>QHelp n’est pas HELP.EXE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>deux HELP</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>HELP DIR</code> peut lancer soit le petit <code>cmd/help</code> (liste + <code>/?</code>), soit ce viewer plein écran selon ce qui est dans le PATH. Le viewer lit <code>HELP.HLP</code> (commandes DOS) via le moteur d’aide QBasic (<code>hengine.asm</code>).</p></div>
+            <div data-lang="en"><p><code>HELP DIR</code> may run either the small <code>cmd/help</code> (list + <code>/?</code>) or this full-screen viewer, depending on PATH. The viewer reads <code>HELP.HLP</code> (DOS commands) through the QBasic help engine (<code>hengine.asm</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>CMD_SW_QHELP</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Le bit <code>CMD_SW_QHELP</code> change les messages de statut et les boutons. Topic limité à 40 caractères (<code>cbmaxTOPIC</code>, rustine QH1). Version viewer <code>0460h</code> dans <code>uifileio.asm</code>.</p></div>
+            <div data-lang="en"><p>The <code>CMD_SW_QHELP</code> bit changes status messages and buttons. Topic capped at 40 characters (<code>cbmaxTOPIC</code>, QH1 patch). Viewer version <code>0460h</code> in <code>uifileio.asm</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>.qh · .src</span></summary>
+          <div class="level-body">
+            <p class="note">Les aides se construisent depuis <code>*.src</code> / <code>*.qh</code> (<code>qbasic.qh</code>, <code>help.src</code>) avec les outils de <code>45/tl/</code>. Localisation : <code>45/qbfrn</code>, <code>qbger</code>, <code>qbusa</code>…</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="ui">
+        <h2>uq/ — le bureau</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>menus COW</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>uimain.asm</code>, <code>uiedit.asm</code>, <code>uifile.c</code>, <code>uisearch.c</code>, <code>uiwind.c</code> : tout ce qui n’est pas le p-code. COW dessine ; ce dossier décide quoi dessiner.</p></div>
+            <div data-lang="en"><p><code>uimain.asm</code>, <code>uiedit.asm</code>, <code>uifile.c</code>, <code>uisearch.c</code>, <code>uiwind.c</code>: everything that is not p-code. COW draws; this folder decides what to draw.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>qbasic.ini</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>qbIniFName</code> = <code>"qbasic.ini"</code>. Options et couleurs survivent aux sessions.</p></div>
+            <div data-lang="en"><p><code>qbIniFName</code> = <code>"qbasic.ini"</code>. Options and colors survive sessions.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>des/</span></summary>
+          <div class="level-body">
+            <p class="note">Fichiers <code>.des</code> : descriptions de dialogues COW (comme DOSSHELL). Même pipeline.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>45/qb5/ir/qedit.asm<small>éditeur</small></span>
+          <span>45/qb5/ir/init.asm<small>/EDCOM /QHELP</small></span>
+          <span>45/qb5/uq/<small>UI fichiers, fenêtres</small></span>
+          <span>45/readme.txt<small>stubs EDIT.COM / HELP.COM</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">PRINT, SCREEN, PLAY : le <a href="qbrt.html">runtime BQB50</a>.</p>
+    <p data-lang="en">PRINT, SCREEN, PLAY: the <a href="qbrt.html">BQB50 runtime</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

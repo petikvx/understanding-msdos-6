@@ -82,6 +82,9 @@
     var s2 = document.createElement("script");
     s2.src = src.replace(/app\.js(\?.*)?$/, "source-links.js");
     document.head.appendChild(s2);
+    var s3 = document.createElement("script");
+    s3.src = src.replace(/app\.js(\?.*)?$/, "search.js");
+    document.head.appendChild(s3);
   })();
 
   document.addEventListener("click", function (ev) {

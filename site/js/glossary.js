@@ -183,6 +183,71 @@
       fr: "File Control Block : ancienne API fichiers DOS 1, encore utilisée par RECOVER.",
       en: "File Control Block: old DOS 1 file API, still used by RECOVER.",
       href: "fichiers.html"
+    },
+    COW: {
+      fr: "Character-Oriented Windows : boîte à fenêtres texte partagée par DOSSHELL et QBasic.",
+      en: "Character-Oriented Windows: text windowing toolkit shared by DOSSHELL and QBasic.",
+      href: "dosshell.html"
+    },
+    WOA: {
+      fr: "Windows / Old App : le swapper qui met de côté DOSSHELL pour lancer un programme.",
+      en: "Windows / Old App: the swapper that shelves DOSSHELL to run a program.",
+      href: "dosshell.html"
+    },
+    COMTAB: {
+      fr: "Table des commandes internes de COMMAND.COM (DIR, COPY, IF…).",
+      en: "COMMAND.COM’s internal-command table (DIR, COPY, IF…).",
+      href: "command.html"
+    },
+    MAGICPATCH: {
+      fr: "Crochet DoubleSpace dans ALLOCATE : le volume comprimé voit les clusters autrement.",
+      en: "DoubleSpace hook in ALLOCATE: the compressed volume sees clusters differently.",
+      href: "dblspace.html"
+    },
+    Bambi: {
+      fr: "Nom de code de SMARTDRV : cache disque en XMS sous INT 13h.",
+      en: "SMARTDRV’s codename: XMS disk cache under INT 13h.",
+      href: "smartdrv.html"
+    },
+    UNPACK: {
+      fr: "Routine noyau qui lit une entrée FAT12/16 (nibble pair/impair).",
+      en: "Kernel routine that reads a FAT12/16 entry (even/odd nibble).",
+      href: "fat.html"
+    },
+    ALLOCATE: {
+      fr: "Routine qui trouve des clusters libres et les enchaîne dans la FAT.",
+      en: "Routine that finds free clusters and chains them in the FAT.",
+      href: "fat.html"
+    },
+    TPA: {
+      fr: "Transient Program Area : la RAM au-dessus de COMMAND où s’installe FOO.COM.",
+      en: "Transient Program Area: RAM above COMMAND where FOO.COM is loaded.",
+      href: "exec.html"
+    },
+    MZ: {
+      fr: "Signature 4Dh 5Ah d’un .EXE (« Mark Zbikowski »).",
+      en: "4Dh 5Ah signature of an .EXE (“Mark Zbikowski”).",
+      href: "exec.html"
+    },
+    CSI: {
+      fr: "Control Sequence Introducer : ESC [ … les séquences ANSI.",
+      en: "Control Sequence Introducer: ESC [ … ANSI sequences.",
+      href: "ansi.html"
+    },
+    APM: {
+      fr: "Advanced Power Management : BIOS qui laisse POWER faire HLT.",
+      en: "Advanced Power Management: BIOS that lets POWER issue HLT.",
+      href: "power.html"
+    },
+    CHOICE: {
+      fr: "Utilitaire .BAT : attend une touche et rend son index dans ERRORLEVEL.",
+      en: "BAT utility: waits for a key and returns its index in ERRORLEVEL.",
+      href: "aide.html"
+    },
+    QBasic: {
+      fr: "Interpréteur BASIC livré avec DOS 6 ; le source est dans 45/, pas dans cmd/qbasic/.",
+      en: "BASIC interpreter shipped with DOS 6; the source is in 45/, not cmd/qbasic/.",
+      href: "qbasic.html"
     }
   };
 
@@ -197,7 +262,9 @@
     "INT 2FH": "INT 2Fh",
     "INT 28H": "INT 28h",
     "INT 12H": "INT 12h",
-    "INT 10H": "INT 10h"
+    "INT 10H": "INT 10h",
+    QBASIC: "QBasic",
+    "EDIT.COM": "QBasic"
   };
 
   var SKIP = { PRE: 1, CODE: 1, KBD: 1, SCRIPT: 1, STYLE: 1, TEXTAREA: 1, SVG: 1, A: 0 };

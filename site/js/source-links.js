@@ -81,8 +81,55 @@
     span.insertBefore(frag, small || null);
   }
 
+  function citePaths(root) {
+    var skip = { A: 1, PRE: 1, CODE: 1, SCRIPT: 1, KBD: 1 };
+    var rx = /\b([\w./+-]+\.(?:asm|inc|c|h|equ|txt|skl))\b/g;
+    function walk(node) {
+      if (node.nodeType === 3) {
+        var t = node.nodeValue;
+        rx.lastIndex = 0;
+        if (!rx.test(t)) return;
+        rx.lastIndex = 0;
+        var frag = document.createDocumentFragment();
+        var last = 0, m;
+        while ((m = rx.exec(t))) {
+          if (m[1].indexOf("/") === -1) continue;
+          if (m.index > last) frag.appendChild(document.createTextNode(t.slice(last, m.index)));
+          var a = document.createElement("a");
+          a.className = "src-ref";
+          a.href = "source.html?f=" + encodeURIComponent(m[1]);
+          a.textContent = m[1];
+          frag.appendChild(a);
+          last = m.index + m[1].length;
+        }
+        if (!frag.childNodes.length) return;
+        if (last < t.length) frag.appendChild(document.createTextNode(t.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+        return;
+      }
+      if (node.nodeType !== 1 || skip[node.tagName] || (node.classList && node.classList.contains("file-index"))) return;
+      var kids = [];
+      for (var i = 0; i < node.childNodes.length; i++) kids.push(node.childNodes[i]);
+      kids.forEach(walk);
+    }
+    walk(root);
+  }
+
+  function remember() {
+    document.addEventListener("click", function (ev) {
+      var a = ev.target.closest && ev.target.closest("a.src-ref, a[href*='source.html']");
+      if (!a) return;
+      try {
+        sessionStorage.setItem("msdos-from", location.pathname.split("/").pop() + location.hash);
+      } catch (e) { /* */ }
+    });
+  }
+
   function boot() {
     document.querySelectorAll(".file-index span").forEach(enhance);
+    var main = document.getElementById("main");
+    if (main) citePaths(main);
+    remember();
     document.querySelectorAll("h2").forEach(function (h) {
       if (h.id !== "sources" && !/^\s*Sources\s*$/i.test(h.textContent)) return;
       if (h.querySelector(".src-all")) return;

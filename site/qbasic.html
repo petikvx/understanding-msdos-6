@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QBasic — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="qbasic.html" aria-current="page">QBasic</a>
+      <a href="qbedit.html">EDIT</a>
+      <a href="qbrt.html">BQB50</a>
+      <a href="source.html?d=45">45/</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#ou">Où est le source</a></li><li><a href="#qbi">L’interpréteur</a></li><li><a href="#build">SAMPLE</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">45/ — pas cmd/qbasic/</p>
+        <h1>QBasic</h1>
+        <p class="lede" data-lang="fr">L’interpréteur livré avec DOS 6. <code>cmd/qbasic/</code> n’a que l’EXE compressé et les démos. Le source tient dans <code>45/</code> — un nom court pour la ligne de commande DOS de 128 caractères (BenS, 16-Mar-1992).</p>
+        <p class="lede" data-lang="en">The interpreter shipped with DOS 6. <code>cmd/qbasic/</code> only has the packed EXE and the demos. The source lives in <code>45/</code> — a short name for DOS’s 128-character command line (BenS, 16-Mar-1992).</p>
+      </header>
+      <section class="topic" id="ou">
+        <h2>Deux tiroirs</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>binaires vs QBI</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Setup pose <code>QBASIC.EXE</code>, <code>GORILLA.BAS</code>, <code>NIBBLES.BAS</code>. Pour lire le parseur, le scanner et les exécuteurs : <code>45/qb/ir/</code> (Quick Basic Interpreter). L’UI et l’init DOS 6 : <code>45/qb5/</code>.</p></div>
+            <div data-lang="en"><p>Setup drops <code>QBASIC.EXE</code>, <code>GORILLA.BAS</code>, <code>NIBBLES.BAS</code>. To read the parser, scanner and executors: <code>45/qb/ir/</code> (Quick Basic Interpreter). UI and DOS 6 init: <code>45/qb5/</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>héritage QB 4.5</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les sources viennent du groupe QuickBASIC. QBasic 1.1 est un interpréteur sans compilateur : pas de .EXE produit, pas de user-libraries (commentaire dans <code>uifileio.asm</code> : retirées « to keep » le binaire petit).</p></div>
+            <div data-lang="en"><p>The sources come from the QuickBASIC group. QBasic 1.1 is an interpreter with no compiler: no produced .EXE, no user-libraries (comment in <code>uifileio.asm</code>: removed “to keep” the binary small).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>45/readme.txt</span></summary>
+          <div class="level-body">
+            <p class="note">Enlist SLM <code>\\guilo\slm -p qbasic</code> dans <code>\45</code>. Contact QB : MarkCha. Arbre d’origine : <code>\\tal\oaks\5a\45</code>.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="qbi">
+        <h2>Parse, scan, execute</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>prs* ss* ex*</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une ligne BASIC devient du p-code. <code>prs*.asm</code> parse, <code>ss*.asm</code> scanne / type-check, <code>ex*.asm</code> exécute (<code>exfor</code>, <code>exif</code>, <code>exprint</code>, <code>exgraph</code>…). Le texte source vit dans le text manager (<code>txt*.asm</code>).</p></div>
+            <div data-lang="en"><p>A BASIC line becomes p-code. <code>prs*.asm</code> parses, <code>ss*.asm</code> scans / type-checks, <code>ex*.asm</code> executes (<code>exfor</code>, <code>exif</code>, <code>exprint</code>, <code>exgraph</code>…). Source text lives in the text manager (<code>txt*.asm</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>init.asm</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Point d’entrée : <code>45/qb5/ir/init.asm</code> — « initial entry point to QBI ». Parse la ligne de commande (<code>cmdSwitches</code>, <code>/RUN</code>, <code>/EDCOM</code>, <code>/QHELP</code>).</p></div>
+            <div data-lang="en"><p>Entry: <code>45/qb5/ir/init.asm</code> — “initial entry point to QBI”. Parses the command line (<code>cmdSwitches</code>, <code>/RUN</code>, <code>/EDCOM</code>, <code>/QHELP</code>).</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>BNF</span></summary>
+          <div class="level-body">
+            <pre><code>; 45/qb5/ir/init.asm
+;Purpose: This module contains the initial entry point to QBI.
+        includeOnce     parser
+        includeOnce     executor
+cbmaxTOPIC equ 40          ; [QH1] max topic for Dos6 QHelp</code></pre>
+            <p class="note" data-lang="fr">La grammaire est <code>qbasbnf.prs</code>. Le premier NMAKE peut échouer faute de RAM pour les tables ; le second passe par un .BAT. Avec 561 Ko libres ça passe du premier coup (Compaq 386/33, ~1 min 45).</p>
+            <p class="note" data-lang="en">The grammar is <code>qbasbnf.prs</code>. The first NMAKE may fail for lack of RAM for the tables; the second goes through a .BAT. With 561 KB free it works first time (Compaq 386/33, ~1 min 45).</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="build">
+        <h2>SAMPLE</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>\45\QB5\QBAS</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>cd \45\QB5\QBAS</code> puis <code>SAMPLE</code> produit QBASIC.EXE, EDIT.COM, HELP.COM et les .HLP. Destinés au répertoire DOS par Setup.</p></div>
+            <div data-lang="en"><p><code>cd \45\QB5\QBAS</code> then <code>SAMPLE</code> produces QBASIC.EXE, EDIT.COM, HELP.COM and the .HLPs. Setup puts them in the DOS directory.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>COW</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les fenêtres, menus, boîtes : COW (<code>45/beef/cw/</code>), le même toolkit que DOSSHELL. Deux libs : <code>cow.lib</code> et <code>cowtandy.lib</code>.</p></div>
+            <div data-lang="en"><p>Windows, menus, boxes: COW (<code>45/beef/cw/</code>), the same toolkit as DOSSHELL. Two libs: <code>cow.lib</code> and <code>cowtandy.lib</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>cmd/qbasic makefile</span></summary>
+          <div class="level-body">
+            <p class="note">Le makefile de <code>cmd/qbasic/</code> lance PKLITE sur l’EXE déjà construit, puis copie. Il ne compile rien.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>45/readme.txt<small>build, enlist, pourquoi « 45 »</small></span>
+          <span>45/qb5/ir/init.asm<small>entrée QBI, switches</small></span>
+          <span>45/qb/ir/<small>prs / ss / ex / txt</small></span>
+          <span>cmd/qbasic/makefile<small>PKLITE seulement</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Le même EXE, d’autres skins : <a href="qbedit.html">EDIT et HELP</a>.</p>
+    <p data-lang="en">The same EXE, other skins: <a href="qbedit.html">EDIT and HELP</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr" class="lang-fr" data-level="discovery">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BQB50 — Comprendre MS-DOS 6</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+  <a class="skip-link" href="#main"><span data-lang="fr">Aller au contenu</span><span data-lang="en">Skip to content</span></a>
+  <header class="site-header"><div class="site-header__inner">
+    <a class="brand" href="index.html"><strong data-lang="fr">Comprendre MS-DOS 6</strong><strong data-lang="en">Understanding MS-DOS 6</strong>
+      <span data-lang="fr">Lecture commentée du code source</span><span data-lang="en">A guided reading of the source</span></a>
+    <nav class="nav">
+      <a href="index.html"><span data-lang="fr">Accueil</span><span data-lang="en">Home</span></a>
+      <a href="qbasic.html">QBasic</a>
+      <a href="qbrt.html" aria-current="page">BQB50</a>
+      <a href="dosshell.html">DOSSHELL</a>
+    </nav>
+    <div class="header-controls">
+      <div class="ctrl"><button type="button" data-set="lang" data-value="fr" aria-pressed="true">FR</button><button type="button" data-set="lang" data-value="en">EN</button></div>
+      <div class="ctrl">
+        <button type="button" data-set="level" data-value="discovery" aria-pressed="true"><span data-lang="fr">Découverte</span><span data-lang="en">Discovery</span></button>
+        <button type="button" data-set="level" data-value="intermediate"><span data-lang="fr">Intermédiaire</span><span data-lang="en">Intermediate</span></button>
+        <button type="button" data-set="level" data-value="technical"><span data-lang="fr">Technique</span><span data-lang="en">Technical</span></button>
+        <button type="button" data-set="level" data-value="all"><span data-lang="fr">Tout</span><span data-lang="en">All</span></button>
+      </div>
+    </div>
+  </div></header>
+  <div class="layout">
+    <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
+      <ol><li><a href="#lib">BQB50.LIB</a></li><li><a href="#rt">runtime/rt</a></li><li><a href="#cow">COW</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+    <main id="main" class="content">
+      <header>
+        <p class="kicker">45/runtime · 45/beef/cw</p>
+        <h1>BQB50 · COW</h1>
+        <p class="lede" data-lang="fr">Sous l’interpréteur : une bibliothèque de ~148 .asm (PRINT, SCREEN, PLAY, fichiers) et le toolkit fenêtres COW, partagé avec DOSSHELL. Sans ça, QBasic n’a ni graphismes ni menus.</p>
+        <p class="lede" data-lang="en">Under the interpreter: a library of ~148 .asm files (PRINT, SCREEN, PLAY, files) and the COW window toolkit, shared with DOSSHELL. Without them QBasic has neither graphics nor menus.</p>
+      </header>
+      <section class="topic" id="lib">
+        <h2>La lib déjà construite</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>45/qb5/qbas/bqb50.lib</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Une copie pré-linkée est dans l’arbre. Pour la reconstruire : <code>\45\RUNTIME\QBASIC</code>, <code>TL=\45\TL\BIN</code>, NMAKE. Fuite mémoire de NMAKE : relancer, il reprend.</p></div>
+            <div data-lang="en"><p>A pre-linked copy sits in the tree. To rebuild: <code>\45\RUNTIME\QBASIC</code>, <code>TL=\45\TL\BIN</code>, NMAKE. NMAKE memory leak: restart, it continues.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>b$ préfixe</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Les symboles runtime s’appellent <code>b$…</code> (BASIC). L’interpréteur les appelle depuis <code>extort.asm</code> (« exit to runtime »). Math copro : switch <code>EM_MATH</code> dans <code>version.h</code>.</p></div>
+            <div data-lang="en"><p>Runtime symbols are named <code>b$…</code> (BASIC). The interpreter calls them from <code>extort.asm</code> (“exit to runtime”). Coprocessor math: <code>EM_MATH</code> switch in <code>version.h</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>crt + herc</span></summary>
+          <div class="level-body">
+            <p class="note"><code>runtime/crt/</code> : helpers C. <code>runtime/herc/</code> : Hercules. <code>cmd/qbasic/msherc.com</code> est le stub livré pour les cartes Herc.</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="rt">
+        <h2>148 fichiers .asm</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>ce que fait PRINT</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Chaque mot-clé « visible » a un module : I/O fichiers, graphismes, chaînes, erreurs. L’interpréteur ne redessine pas un cercle : il appelle le runtime.</p></div>
+            <div data-lang="en"><p>Each “visible” keyword has a module: file I/O, graphics, strings, errors. The interpreter does not redraw a circle: it calls the runtime.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>messages</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>45/qbusa/strings/qbasmsgs.txt</code> (et qbfrn, qbger…) : « QBasic cannot continue », « Undefined function ». Localiser = retokeniser, pas recompiler tout l’interpréteur.</p></div>
+            <div data-lang="en"><p><code>45/qbusa/strings/qbasmsgs.txt</code> (and qbfrn, qbger…): “QBasic cannot continue”, “Undefined function”. Localizing = retokenizing, not recompiling the whole interpreter.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>45/runtime/rt/</span></summary>
+          <div class="level-body">
+            <p class="note">Ouvre l’arbre dans l’<a href="source.html?d=45/runtime/rt">explorateur</a>. Les noms sont souvent obscurs (<code>b$…</code>) ; les commentaires d’en-tête restent ceux de QB 4.x (© 1986).</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="cow">
+        <h2>Le même COW que DOSSHELL</h2>
+        <details class="level-block" data-level="discovery" open>
+          <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
+            <span>45/beef/cw</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p>Character-Oriented Windows : fenêtres texte, menus, souris. DOSSHELL et QBasic ne réinventent pas une UI. D’où le même « look » gris/bleu.</p></div>
+            <div data-lang="en"><p>Character-Oriented Windows: text windows, menus, mouse. DOSSHELL and QBasic do not reinvent a UI. Hence the same grey/blue look.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="intermediate">
+          <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
+            <span>kernel + user</span></summary>
+          <div class="level-body">
+            <div data-lang="fr"><p><code>cw/kernel/</code> : mémoire, souris, INT 24. <code>cw/user/</code> : boutons, listes, menus. Doc dans <code>45/doc/cowapi.doc</code>.</p></div>
+            <div data-lang="en"><p><code>cw/kernel/</code>: memory, mouse, INT 24. <code>cw/user/</code>: buttons, lists, menus. Docs in <code>45/doc/cowapi.doc</code>.</p></div>
+          </div>
+        </details>
+        <details class="level-block" data-level="technical">
+          <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
+            <span>Tandy</span></summary>
+          <div class="level-body">
+            <p class="note"><code>cowtandy.lib</code> : variante clavier/vidéo Tandy 1000. <code>buildlqb.bat</code> construit la lib « little QB ».</p>
+          </div>
+        </details>
+      </section>
+      <section class="topic" id="sources"><h2>Sources</h2>
+        <div class="file-index">
+          <span>45/runtime/rt/<small>~148 .asm runtime</small></span>
+          <span>45/runtime/qbasic/<small>makefile BQB50</small></span>
+          <span>45/beef/cw/<small>COW kernel + user</small></span>
+          <span>45/qbusa/strings/qbasmsgs.txt<small>messages US</small></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer__inner">
+    <p data-lang="fr">Retour au <a href="qbasic.html">guide QBasic</a> ou à <a href="dosshell.html">DOSSHELL</a>.</p>
+    <p data-lang="en">Back to the <a href="qbasic.html">QBasic guide</a> or <a href="dosshell.html">DOSSHELL</a>.</p>
+  </div></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>

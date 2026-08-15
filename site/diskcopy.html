@@ -61,7 +61,11 @@
           <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
             <span>ORG 100h · BEGIN</span></summary>
           <div class="level-body">
-            <p class="note"><code>diskcopy.asm</code> : spec « Diskette to diskette complete copy ». Pas de disque dur — CHS floppy only. Les buffers occupent la TPA (comme COMMAND le calcule dans BYTCNT).</p>
+            <pre><code>; cmd/diskcopy/diskcopy.asm
+; "Diskette to diskette complete copy" — ORG 100h
+; No hard disk. CHS only. Buffers fill the TPA.</code></pre>
+            <p class="note" data-lang="fr">Pas de disque dur. Les buffers occupent la TPA (comme COMMAND dans BYTCNT). Une passe = autant de pistes que la RAM tient ; ensuite « Insert TARGET diskette ».</p>
+            <p class="note" data-lang="en">No hard disk. Buffers fill the TPA (like COMMAND’s BYTCNT). One pass = as many tracks as RAM holds; then “Insert TARGET diskette”.</p>
           </div>
         </details>
       </section>

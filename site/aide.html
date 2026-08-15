@@ -31,7 +31,7 @@
   </div></header>
   <div class="layout">
     <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
-      <ol><li><a href="#hlp">DOSHELP.HLP</a></li><li><a href="#spawn">/? délégué</a></li><li><a href="#choice">CHOICE absent</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+      <ol><li><a href="#hlp">DOSHELP.HLP</a></li><li><a href="#spawn">/? délégué</a></li><li><a href="#choice">CHOICE</a></li><li><a href="#sources">Sources</a></li></ol></nav>
     <main id="main" class="content">
       <header>
         <p class="kicker">cmd/help — DOS 5.0, MD 3-Oct-90</p>
@@ -104,28 +104,36 @@
       </section>
 
       <section class="topic" id="choice">
-        <h2>CHOICE n’est pas dans l’arbre</h2>
+        <h2>CHOICE — pas dans cmd/, dans c6ers/</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
-            <span>DOS 6, ailleurs</span></summary>
+            <span>ERRORLEVEL 1, 2, 3…</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>CHOICE.COM (pause .BAT, <code>/C:YN</code>, errorlevel) est un classique MS-DOS 6. Dans <em>ce</em> dépôt : pas de <code>cmd/choice/</code>. Les seules occurrences de « choice » sont des invites FDISK ou des menus CONFIG.SYS. On le mentionne pour ne pas faire croire qu’il a été oublié — il n’a simplement pas été livré avec ces sources.</p></div>
-            <div data-lang="en"><p>CHOICE.COM (BAT pause, <code>/C:YN</code>, errorlevel) is a classic MS-DOS 6 extra. In <em>this</em> tree: no <code>cmd/choice/</code>. The only “choice” hits are FDISK prompts or CONFIG.SYS menus. Mentioned so it is not mistaken for an omission — it simply did not ship with these sources.</p></div>
+            <div data-lang="fr"><p>CHOICE.COM pose une question dans un .BAT et rend l’index de la touche dans ERRORLEVEL (1 = première lettre). Pas sous <code>cmd/choice/</code> : Ericst l’a écrit le 14-May-92 dans <code>c6ers/choice/</code>, à côté des bibliothèques C. <code>/C:YN</code> par défaut, <code>/T:c,nn</code> pour un délai (même syntaxe que le menu de boot).</p></div>
+            <div data-lang="en"><p>CHOICE.COM asks a question in a BAT and returns the key index in ERRORLEVEL (1 = first letter). Not under <code>cmd/choice/</code>: Ericst wrote it 14-May-92 in <code>c6ers/choice/</code>, next to the C libraries. Default <code>/C:YN</code>, <code>/T:c,nn</code> for a timeout (same syntax as the boot menu).</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
           <summary><span class="badge" data-lang="fr">Intermédiaire</span><span class="badge" data-lang="en">Intermediate</span>
-            <span>PAUSE + IF ERRORLEVEL</span></summary>
+            <span>/C /N /S /T</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Sans CHOICE, un .BAT fait PAUSE ou une boucle de FIND. COMMAND a déjà IF ERRORLEVEL — c’est le contrat que FIND, XCOPY, BACKUP, TREE honorent.</p></div>
-            <div data-lang="en"><p>Without CHOICE, a BAT uses PAUSE or a FIND loop. COMMAND already has IF ERRORLEVEL — the contract FIND, XCOPY, BACKUP, TREE honour.</p></div>
+            <div data-lang="fr"><p><code>/N</code> cache les <code>[Y,N]?</code>. <code>/S</code> respecte la casse. Une touche hors liste : beep. <code>/?</code> ou argument pourri : errorlevel 255. Pas de handler Ctrl-C : Ctrl-C donne 0. Le 25-Aug-92, le premier choix est passé de 0 à 1 — pour coller à <code>IF ERRORLEVEL 1</code>.</p></div>
+            <div data-lang="en"><p><code>/N</code> hides the <code>[Y,N]?</code>. <code>/S</code> is case-sensitive. A key not in the list: beep. <code>/?</code> or a bad argument: errorlevel 255. No Ctrl-C handler: Ctrl-C yields 0. On 25-Aug-92 the first choice moved from 0 to 1 — to match <code>IF ERRORLEVEL 1</code>.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="technical">
           <summary><span class="badge" data-lang="fr">Technique</span><span class="badge" data-lang="en">Technical</span>
-            <span>QBasic aussi dehors</span></summary>
+            <span>ORG 100h · table NLS</span></summary>
           <div class="level-body">
-            <p class="note"><code>cmd/qbasic/</code> est un autre produit (binaires + .HLP). Même décision : pas un chapitre OS. HELP, lui, est bien un utilitaire DOS 5 du noyau « comment s’en servir ».</p>
+            <pre><code>; c6ers/choice/choice.asm — Ericst 14-May-92
+; CHOICE [/c choices] [/N] [/S] [/T:c,nn] [text]
+; index returned in ERRORLEVEL (1 = first letter)
+    mov  ah, 30h
+    int  21h
+    cmp  al, 3          ; requires DOS 4.0 or later
+    jg   GetTable</code></pre>
+            <p class="note" data-lang="fr">Pour <code>/S</code> off, il demande la table de majuscules du pays courant (INT 21h, pas un <code>AND 5Fh</code> ASCII). Bug 1018 : un timeout de 12 secondes raté — corrigé le 31-Aug-92 en même temps que <code>/Tnn,c</code> → <code>/Tc,nn</code>.</p>
+            <p class="note" data-lang="en">With <code>/S</code> off it asks the current country’s uppercase table (INT 21h, not an ASCII <code>AND 5Fh</code>). Bug 1018: a 12-second timeout failed — fixed 31-Aug-92 when <code>/Tnn,c</code> became <code>/Tc,nn</code>.</p>
           </div>
         </details>
       </section>
@@ -134,13 +142,14 @@
         <div class="file-index">
           <span>cmd/help/help.c<small>DOSHELP.HLP, name_table, spawn /?</small></span>
           <span>cmd/help/helper.asm<small>hauteur MORE, casse FIND</small></span>
+          <span>c6ers/choice/choice.asm<small>Ericst, ERRORLEVEL 1…, /T:c,nn</small></span>
         </div>
       </section>
     </main>
   </div>
   <footer class="site-footer"><div class="site-footer__inner">
-    <p data-lang="fr">Rustines de chargement et de BIOS : <a href="loadfix.html">LOADFIX · EXE2BIN · PRINTFIX · WINA20</a>.</p>
-    <p data-lang="en">Load and BIOS patches: <a href="loadfix.html">LOADFIX · EXE2BIN · PRINTFIX · WINA20</a>.</p>
+    <p data-lang="fr">L’autre HELP, plein écran : <a href="qbedit.html">EDIT · QHelp</a>. Rustines : <a href="loadfix.html">LOADFIX</a>.</p>
+    <p data-lang="en">The other, full-screen HELP: <a href="qbedit.html">EDIT · QHelp</a>. Patches: <a href="loadfix.html">LOADFIX</a>.</p>
   </div></footer>
   <script src="js/app.js"></script>
 </body>

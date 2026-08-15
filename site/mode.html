@@ -61,7 +61,13 @@
           <summary><span class="badge" data-lang="fr">Technique</span><span data-lang="en">Technical</span>
             <span>cmd/mode/*.asm</span></summary>
           <div class="level-body">
-            <p class="note">Le binaire est découpé par périphérique (vidéo, COM, LPT, code page). Un parseur commun, puis un saut vers le module.</p>
+            <p class="note" data-lang="fr"><code>main.asm</code> parse, puis saute : <code>modevid.asm</code> / <code>modescrn.asm</code> (INT 10h + LINES=), <code>modecom.asm</code> (generic IOCTL série), <code>modeprin.asm</code> (LPT retry), <code>modecp.asm</code> (PREP/SEL). Résident possible dans <code>rescode.asm</code> pour les retries imprimante.</p>
+            <p class="note" data-lang="en"><code>main.asm</code> parses, then jumps: <code>modevid.asm</code> / <code>modescrn.asm</code> (INT 10h + LINES=), <code>modecom.asm</code> (serial generic IOCTL), <code>modeprin.asm</code> (LPT retry), <code>modecp.asm</code> (PREP/SEL). Optional resident in <code>rescode.asm</code> for printer retries.</p>
+            <pre><code>; cmd/mode/main.asm — un parseur, un saut par périphérique
+; MODE CO80          → modevid
+; MODE COM1:96,N,8,1 → modecom  (IOCTL, pas INT 14h direct)
+; MODE LPT1=COM1     → modeprin
+; MODE CON CP PREP   → modecp</code></pre>
           </div>
         </details>
       </section>
@@ -118,7 +124,13 @@
         </details>
       </section>
       <section class="topic" id="sources"><h2>Sources</h2>
-        <div class="file-index"><span>cmd/mode/<small>16 .asm, IOCTL vidéo / COM / LPT / CP</small></span></div>
+        <div class="file-index">
+          <span>cmd/mode/main.asm<small>parseur, dispatch</small></span>
+          <span>cmd/mode/modevid.asm · modescrn.asm<small>CO80, LINES=</small></span>
+          <span>cmd/mode/modecom.asm<small>baud, parité</small></span>
+          <span>cmd/mode/modeprin.asm<small>LPT retry, redirect</small></span>
+          <span>cmd/mode/modecp.asm<small>PREP / SEL</small></span>
+        </div>
       </section>
     </main>
   </div>

@@ -891,6 +891,16 @@ ADD  DX,ES:[BP.dpb_first_sector]</pre>
                 <code>CLUSSPLIT</code> and rebuilds the word in <code>CLUSSAVE</code>.
               </p>
             </figure>
+            <div class="machine machine-nib" id="nib-machine">
+              <p class="illust__cap" data-lang="fr">Essaie UNPACK : trois octets → deux clusters</p>
+              <p class="illust__cap" data-lang="en">Try UNPACK: three bytes → two clusters</p>
+              <p class="machine__ctrl">
+                <label>b0 <input id="nib0" value="AB" maxlength="2" size="3"></label>
+                <label>b1 <input id="nib1" value="CD" maxlength="2" size="3"></label>
+                <label>b2 <input id="nib2" value="EF" maxlength="2" size="3"></label>
+              </p>
+              <p><code id="nib-out">pair 0DAB · impair 0EFC</code></p>
+            </div>
           </div>
         </details>
 
@@ -1822,5 +1832,6 @@ NOTFREECLUS:
     </div>
   </footer>
   <script src="js/app.js"></script>
+  <script src="js/nibble.js"></script>
 </body>
 </html>

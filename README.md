@@ -6,6 +6,7 @@ Un guide statique, bilingue (FR / EN), qui explique le système depuis ses sourc
 
 - **Guide :** ouvrir [`site/index.html`](site/index.html) — ou la [page racine](index.html) qui y pointe.
 - **Explorateur :** [`site/source.html`](site/source.html) — arbre + coloration (ex. [`bios/sysconf.asm`](site/source.html?f=bios/sysconf.asm)).
+- **Recherche :** champ en tête de chaque page (index JS).
 - **Sources brutes :** [`ms-dos-6-source-code/`](ms-dos-6-source-code/)
 - **Dépôt :** [github.com/petikvx/understanding-msdos-6](https://github.com/petikvx/understanding-msdos-6)
 
@@ -133,7 +134,7 @@ L’URL publique ouvre `index.html`, qui envoie vers `site/`.
 | [LOADFIX](site/loadfix.html) | EXE2BIN, PRINTFIX, WINA20.386 |
 | [Restes](site/restes.html) | ADDRV (MSKK), REDIR sans source, MIRROR/UNFORMAT (Central Point) |
 
-Hors saga, volontairement : **QBasic / EDIT**, **Setup** (`install/`), **CHOICE.COM** (absent de cet arbre).
+Saga 8 : [QBasic](site/qbasic.html), [EDIT / HELP](site/qbedit.html), [BQB50 · COW](site/qbrt.html) — source dans `45/`. CHOICE : `c6ers/choice/` (page HELP). Setup (`install/`) reste hors guide.
 
 ---
 

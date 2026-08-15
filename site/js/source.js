@@ -24,6 +24,9 @@
   var tree = {};
   var openDirs = {};
   var currentFile = "";
+  var currentLines = [];
+  var findHits = [];
+  var findIdx = -1;
 
   function lang() {
     return document.documentElement.lang === "en" ? "en" : "fr";
@@ -255,6 +258,7 @@
     var ext = extOf(rel);
     var kind = kindOf(ext, rel);
     var lines = text.replace(/\t/g, "    ").split(/\r?\n/);
+    currentLines = lines;
     var gutter = [];
     var html = [];
     var w = String(lines.length).length;
@@ -263,10 +267,16 @@
       var pad = String(n);
       while (pad.length < w) pad = " " + pad;
       gutter.push("<a id=\"L" + n + "\" href=\"#L" + n + "\">" + pad + "</a>");
-      html.push(colorLine(lines[i], kind));
+      html.push("<span class=\"src-ln\" data-n=\"" + n + "\">" + colorLine(lines[i], kind) + "</span>");
     }
     gutterEl.innerHTML = gutter.join("\n");
     codeEl.innerHTML = html.join("\n") + "\n";
+    findHits = [];
+    findIdx = -1;
+    var findEl = document.getElementById("src-find");
+    var findN = document.getElementById("src-find-n");
+    if (findEl) findEl.value = "";
+    if (findN) findN.textContent = "";
   }
 
   function kindOf(ext, rel) {
@@ -481,9 +491,67 @@
     if (!currentFile) showEmpty();
   });
 
+  function neighbor(delta) {
+    if (!currentFile || !paths.length) return;
+    var i = paths.indexOf(currentFile);
+    if (i < 0) return;
+    var j = i + delta;
+    if (j < 0 || j >= paths.length) return;
+    openFile(paths[j], true);
+  }
+
+  function runFind(dir) {
+    var q = (document.getElementById("src-find").value || "").toLowerCase();
+    var note = document.getElementById("src-find-n");
+    if (!q || !currentLines.length) {
+      if (note) note.textContent = "";
+      return;
+    }
+    findHits = [];
+    for (var i = 0; i < currentLines.length; i++) {
+      if (currentLines[i].toLowerCase().indexOf(q) !== -1) findHits.push(i + 1);
+    }
+    if (!findHits.length) {
+      if (note) note.textContent = "0";
+      return;
+    }
+    if (dir < 0) findIdx = (findIdx <= 0) ? findHits.length - 1 : findIdx - 1;
+    else findIdx = (findIdx + 1) % findHits.length;
+    var n = findHits[findIdx];
+    if (note) note.textContent = (findIdx + 1) + "/" + findHits.length;
+    location.hash = "L" + n;
+    scrollToHash();
+  }
+
+  function wireTools() {
+    var prev = document.getElementById("src-prev");
+    var next = document.getElementById("src-next");
+    var find = document.getElementById("src-find");
+    var back = document.getElementById("src-back");
+    if (prev) prev.addEventListener("click", function () { neighbor(-1); });
+    if (next) next.addEventListener("click", function () { neighbor(1); });
+    if (find) {
+      find.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          runFind(ev.shiftKey ? -1 : 1);
+        }
+      });
+    }
+    try {
+      var ref = sessionStorage.getItem("msdos-from");
+      if (ref && back) {
+        back.hidden = false;
+        back.href = ref;
+        back.textContent = t("← article", "← article");
+      }
+    } catch (e) { /* */ }
+  }
+
   fetch("js/sourcetree.json").then(function (r) { return r.json(); }).then(function (list) {
     paths = list;
     tree = buildTree(list);
+    wireTools();
     applyQuery();
   }).catch(function () {
     showErr(t("Index de l’arbre introuvable (sourcetree.json).", "Tree index missing (sourcetree.json)."));
