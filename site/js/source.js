@@ -548,12 +548,30 @@
     } catch (e) { /* */ }
   }
 
-  fetch("js/sourcetree.json").then(function (r) { return r.json(); }).then(function (list) {
+  function start(list) {
+    if (!list || !list.length) {
+      showErr(t("Index de l’arbre introuvable (sourcetree.json).", "Tree index missing (sourcetree.json)."));
+      return;
+    }
     paths = list;
     tree = buildTree(list);
     wireTools();
     applyQuery();
-  }).catch(function () {
-    showErr(t("Index de l’arbre introuvable (sourcetree.json).", "Tree index missing (sourcetree.json)."));
-  });
+  }
+
+  if (window.MSDOS_SOURCETREE && window.MSDOS_SOURCETREE.length) {
+    start(window.MSDOS_SOURCETREE);
+  } else {
+    var tries = ["js/sourcetree.json", "./js/sourcetree.json"];
+    (function next(i) {
+      if (i >= tries.length) {
+        showErr(t("Index de l’arbre introuvable (sourcetree.json).", "Tree index missing (sourcetree.json)."));
+        return;
+      }
+      fetch(tries[i]).then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).then(start).catch(function () { next(i + 1); });
+    })(0);
+  }
 })();
