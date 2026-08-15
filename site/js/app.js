@@ -85,6 +85,9 @@
     var s3 = document.createElement("script");
     s3.src = src.replace(/app\.js(\?.*)?$/, "search.js");
     document.head.appendChild(s3);
+    var s4 = document.createElement("script");
+    s4.src = src.replace(/app\.js(\?.*)?$/, "nav.js");
+    document.head.appendChild(s4);
   })();
 
   document.addEventListener("click", function (ev) {

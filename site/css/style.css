@@ -188,6 +188,132 @@ html[data-level="intermediate"] .level-block[data-level="technical"] {
   color: var(--bg-elev);
 }
 
+.nav-toggle {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.nav-toggle[aria-expanded="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+.nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.35);
+  z-index: 45;
+}
+
+.nav-backdrop[hidden],
+.nav-panel[hidden] { display: none !important; }
+
+body.nav-open .nav-backdrop { display: block; }
+
+.nav-panel {
+  position: fixed;
+  z-index: 50;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  max-height: calc(100vh - var(--header-h));
+  overflow: auto;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.25rem 1.5rem;
+  display: grid;
+  gap: 1rem 1.5rem;
+}
+
+@media (min-width: 720px) {
+  .nav-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: var(--max);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 2rem);
+    border: 1px solid var(--line);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+}
+
+.nav-panel h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.nav-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-panel a {
+  display: block;
+  padding: 0.2rem 0;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.92rem;
+  border-radius: 4px;
+}
+
+.nav-panel a:hover,
+.nav-panel a[aria-current="page"] {
+  color: var(--accent);
+}
+
+.article-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 0;
+}
+
+.article-nav a {
+  display: block;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  text-decoration: none;
+  color: inherit;
+}
+
+.article-nav a:hover { border-color: var(--accent-line); }
+
+.article-nav span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.article-nav__next { text-align: right; grid-column: 2; }
+
+@media (max-width: 720px) {
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .header-controls { margin-left: 0; }
+}
+
 .ctrl button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
