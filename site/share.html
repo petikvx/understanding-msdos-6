@@ -31,23 +31,28 @@
   </div></header>
   <div class="layout">
     <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
-      <ol><li><a href="#jshare">JShare</a></li><li><a href="#deny">Deny read / write</a></li><li><a href="#lock">$LockOper</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+      <ol><li><a href="#jshare">À quoi ça sert</a></li><li><a href="#deny">Qui peut ouvrir</a></li><li><a href="#lock">Verrouiller des octets</a></li><li><a href="#sources">Sources</a></li></ol></nav>
     <main id="main" class="content">
       <header>
         <p class="kicker">cmd/share/ · dos/share.asm · dos/lock.asm</p>
         <h1>SHARE</h1>
-        <p class="lede" data-lang="fr">DOS seul ne sait pas que deux programmes tiennent le même fichier. SHARE s’installe et remplit la table <code>JShare</code> : fusionner les SFT, refuser un second open, poser des verrous d’octets. Sans lui, les modes <code>SHARING_*</code> de <a href="fichiers.html#open">OPEN</a> sont des vœux.</p>
-        <p class="lede" data-lang="en">DOS alone does not know two programs hold the same file. SHARE installs and fills the <code>JShare</code> table: collapse SFTs, refuse a second open, set byte locks. Without it, the <code>SHARING_*</code> modes on <a href="fichiers.html#open">OPEN</a> are wishes.</p>
+        <p class="lede" data-lang="fr">Deux programmes, un seul fichier. Sans SHARE, DOS fait comme s’ils étaient seuls : les deux écrivent, le fichier est une bouillie. Avec <code>SHARE</code> en mémoire, le second open peut recevoir « Access denied » — et c’est voulu.</p>
+        <p class="lede" data-lang="en">Two programs, one file. Without SHARE, DOS pretends each is alone: both write, the file is mush. With <code>SHARE</code> in memory, the second open can get “Access denied” — on purpose.</p>
       </header>
       <section class="topic" id="jshare">
-        <h2>Une table de far calls</h2>
+        <h2>SHARE dans CONFIG ou à l’invite</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
-            <span data-lang="fr">Le noyau appelle dans le vide… sauf si SHARE est là</span>
-            <span data-lang="en">The kernel calls into the void… unless SHARE is there</span></summary>
+            <span>INSTALL=C:\DOS\SHARE.EXE</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Les stubs de <code>dos/share.asm</code> / <code>lock.asm</code> rendent « pas d’erreur » tant que SHARE n’est pas chargé. Une fois lancé, il patch <code>JShare</code>. <code>$Open</code> appelle <code>JShare + 12*4</code> (ShCol) pour collapser deux SFT identiques.</p></div>
-            <div data-lang="en"><p>Stubs in <code>dos/share.asm</code> / <code>lock.asm</code> return “no error” until SHARE is loaded. Once running, it patches <code>JShare</code>. <code>$Open</code> calls <code>JShare + 12*4</code> (ShCol) to collapse two identical SFTs.</p></div>
+            <div data-lang="fr">
+              <p>Un PC DOS est mono-tâche… jusqu’à Windows, DOSSHELL, ou un réseau. Alors deux programmes tiennent FOO.DAT en même temps. DOS, tout seul, ne tient pas la liste « qui a ouvert quoi ».</p>
+              <p><code>SHARE</code> (souvent <code>INSTALL=C:\DOS\SHARE.EXE</code> dans CONFIG.SYS) reste en mémoire et répond à chaque ouverture : « celui-ci a déjà le fichier en écriture, refuse le second » ou « les deux peuvent lire ». Sans SHARE, ces règles existent sur le papier (modes d’ouverture) mais personne ne les applique — DOS dit toujours oui.</p>
+            </div>
+            <div data-lang="en">
+              <p>A DOS PC is single-tasking… until Windows, DOSSHELL, or a network. Then two programs hold FOO.DAT at once. DOS alone does not keep the list “who opened what”.</p>
+              <p><code>SHARE</code> (often <code>INSTALL=C:\DOS\SHARE.EXE</code> in CONFIG.SYS) stays resident and answers every open: “this one already has the file for write, refuse the second” or “both may read”. Without SHARE those rules exist on paper (open modes) but nobody enforces them — DOS always says yes.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -67,14 +72,14 @@
         </details>
       </section>
       <section class="topic" id="deny">
-        <h2>Compatibility vs deny-*</h2>
+        <h2>Qui a le droit d’ouvrir</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span data-lang="fr">Le mode 70h des FCB réseau</span>
             <span data-lang="en">Network FCB mode 70h</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Compatibility (DOS 2) : « je suis tout seul ». Deny-write : les autres peuvent lire. <code>SHARING_NET_FCB</code> (70h) : cas spécial déjà vu à la fermeture du JFN.</p></div>
-            <div data-lang="en"><p>Compatibility (DOS 2): “I am alone”. Deny-write: others may read. <code>SHARING_NET_FCB</code> (70h): special case already seen when freeing the JFN.</p></div>
+            <div data-lang="fr"><p>Quand un programme ouvre un fichier, il peut dire : je suis tout seul (défaut des vieux EXE), les autres peuvent lire pas écrire, personne d’autre, ou tout le monde. SHARE compare la demande du second à ce que le premier a déclaré. Si ça clash : « Access denied » — ou Abort / Retry pour les tout vieux programmes.</p></div>
+            <div data-lang="en"><p>When a program opens a file it can say: I am alone (old EXE default), others may read not write, nobody else, or everyone. SHARE compares the second request to what the first declared. On a clash: “Access denied” — or Abort / Retry for very old programs.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -94,13 +99,13 @@
         </details>
       </section>
       <section class="topic" id="lock">
-        <h2>Verrous</h2>
+        <h2>Verrouiller une fiche, pas tout le fichier</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span>AH=5Ch</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Même fichier ouvert deux fois : on peut verrouiller une plage d’octets. Sans SHARE, <code>$LockOper</code> est un stub. Windows et les bases DOS s’en servent.</p></div>
-            <div data-lang="en"><p>Same file opened twice: you can lock a byte range. Without SHARE, <code>$LockOper</code> is a stub. Windows and DOS databases use it.</p></div>
+            <div data-lang="fr"><p>Une base peut laisser deux utilisateurs ouvrir le même fichier, mais pas la même fiche. Le programme demande : « réserve-moi les octets 1200 à 1250 ». Sans SHARE, la demande est ignorée et les deux écrasent la fiche. Windows 3 et dBASE en dépendent.</p></div>
+            <div data-lang="en"><p>A database can let two users open the same file, but not the same record. The program asks: “reserve bytes 1200 to 1250”. Without SHARE the request is ignored and both overwrite the record. Windows 3 and dBASE depend on it.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">

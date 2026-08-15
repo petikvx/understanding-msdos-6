@@ -32,23 +32,28 @@
   </div></header>
   <div class="layout">
     <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
-      <ol><li><a href="#ah44">AH=44h</a></li><li><a href="#dev">Device vs fichier</a></li><li><a href="#generic">Generic IOCTL</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+      <ol><li><a href="#ah44">Parler au pilote</a></li><li><a href="#dev">Clavier ou fichier ?</a></li><li><a href="#generic">Changer une disquette</a></li><li><a href="#sources">Sources</a></li></ol></nav>
     <main id="main" class="content">
       <header>
         <p class="kicker">dos/ioctl.asm · inc/ioctl.inc · dos/dev.asm</p>
         <h1>IOCTL</h1>
-        <p class="lede" data-lang="fr">Le couloir de service : parler au <em>pilote</em> plutôt qu’au fichier. Est-ce CON ? Mode raw ? Changer le BPB d’une disquette ? Tout passe par <code>AH=44h</code>, déjà utilisé par <a href="exec.html">$EXEC</a> pour refuser d’exécuter un device.</p>
-        <p class="lede" data-lang="en">The service corridor: talk to the <em>driver</em> rather than the file. Is it CON? Raw mode? Change a floppy’s BPB? All through <code>AH=44h</code>, already used by <a href="exec.html">$EXEC</a> to refuse executing a device.</p>
+        <p class="lede" data-lang="fr"><code>TYPE AUTOEXEC.BAT</code> lit des octets sur le disque. <code>MODE CO80</code> ne lit rien : il dit au pilote d’écran « passe en 80 colonnes ». Ce deuxième genre d’ordre, ce n’est pas un fichier — c’est IOCTL, le service « parler à l’appareil ».</p>
+        <p class="lede" data-lang="en"><code>TYPE AUTOEXEC.BAT</code> reads bytes from disk. <code>MODE CO80</code> reads nothing: it tells the screen driver “go to 80 columns”. That second kind of order is not a file — it is IOCTL, the “talk to the device” service.</p>
       </header>
       <section class="topic" id="ah44">
-        <h2>Une fonction, beaucoup d’AL</h2>
+        <h2>Même ticket, autre guichet</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span class="badge" data-lang="en">Discovery</span>
-            <span data-lang="fr">Le handle redevient un ticket</span>
-            <span data-lang="en">The handle is a ticket again</span></summary>
+            <span>MODE, CTTY, MORE</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>On passe le même BX que pour READ. DOS retrouve la SFT, regarde <code>devid_device</code>, et envoie une requête au driver (<code>DEVIOCALL</code> dans <code>dev.asm</code>) au lieu de <code>UNPACK</code>.</p></div>
-            <div data-lang="en"><p>You pass the same BX as for READ. DOS finds the SFT, looks at <code>devid_device</code>, and sends a driver request (<code>DEVIOCALL</code> in <code>dev.asm</code>) instead of <code>UNPACK</code>.</p></div>
+            <div data-lang="fr">
+              <p>Quand tu ouvres CON (le clavier/écran) ou A: (une disquette), DOS te donne un numéro — le même genre de « handle » que pour un fichier. Lire et écrire passent par ce numéro. IOCTL aussi : « ce handle, c’est quoi ? un fichier ou le clavier ? » / « mets-le en 80 colonnes » / « cette disquette est un 1.44 Mo ».</p>
+              <p>Tu ne tapes pas « IOCTL » à l’invite. <a href="mode.html">MODE</a>, CTTY, MORE, FORMAT, DISKCOPY le font pour toi. Pour DOS, tout ça est l’appel n° 44h.</p>
+            </div>
+            <div data-lang="en">
+              <p>When you open CON (keyboard/screen) or A: (a floppy), DOS gives you a number — the same kind of “handle” as for a file. Read and write go through that number. So does IOCTL: “what is this handle? a file or the keyboard?” / “switch to 80 columns” / “this floppy is 1.44 MB”.</p>
+              <p>You do not type “IOCTL” at the prompt. <a href="mode.html">MODE</a>, CTTY, MORE, FORMAT, DISKCOPY do it for you. To DOS it is all call 44h.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -69,13 +74,13 @@
         </details>
       </section>
       <section class="topic" id="dev">
-        <h2>Fichier ou périphérique</h2>
+        <h2>Clavier ou fichier ?</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span>devid_ISDEV</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Le bit 7 de <code>sf_flags</code> (page <a href="fichiers.html#sft">SFT</a>) décide. CTTY, MORE, les redirections de COMMAND s’en servent. <code>MODE</code> et <code>CTTY</code> sont des clients IOCTL.</p></div>
-            <div data-lang="en"><p>Bit 7 of <code>sf_flags</code> (<a href="fichiers.html#sft">SFT</a> page) decides. CTTY, MORE, COMMAND redirections use it. <code>MODE</code> and <code>CTTY</code> are IOCTL clients.</p></div>
+            <div data-lang="fr"><p><code>DIR &gt; LIST.TXT</code> écrit un fichier. <code>DIR &gt; PRN</code> envoie la même chose à l’imprimante. Pour COMMAND, les deux sont un handle. IOCTL sert à demander : fichier sur la FAT, ou CON / PRN ? MORE s’en sert pour paginer (écran) ou tout déverser (fichier).</p></div>
+            <div data-lang="en"><p><code>DIR &gt; LIST.TXT</code> writes a file. <code>DIR &gt; PRN</code> sends the same bytes to the printer. To COMMAND both are a handle. IOCTL asks: FAT file, or CON / PRN? MORE uses that to page (screen) or dump everything (file).</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -95,14 +100,14 @@
         </details>
       </section>
       <section class="topic" id="generic">
-        <h2>Generic IOCTL</h2>
+        <h2>Dire au lecteur « cette disquette est un 1.44 »</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span data-lang="fr">Changer de format de disquette sans FORMAT</span>
             <span data-lang="en">Change floppy format without FORMAT</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>KGS, 22 avril 1985 : un paquet générique (catégorie + fonction + buffer). FORMAT et DISKCOPY s’en servent pour dire au driver « cette disquette est 1.44 Mo ».</p></div>
-            <div data-lang="en"><p>KGS, 22 April 1985: a generic packet (category + function + buffer). FORMAT and DISKCOPY use it to tell the driver “this floppy is 1.44 MB”.</p></div>
+            <div data-lang="fr"><p>Lire un fichier ne dit rien de la géométrie (80 pistes ? 18 secteurs ?). FORMAT et DISKCOPY doivent l’annoncer au pilote. Ils n’appellent pas le BIOS tout seuls : ils envoient un paquet IOCTL. Le pilote comprend « prépare cette géométrie ».</p></div>
+            <div data-lang="en"><p>Reading a file says nothing about geometry (80 tracks? 18 sectors?). FORMAT and DISKCOPY must tell the floppy driver. They do not call the BIOS themselves: they send an IOCTL packet. The driver understands “prepare this geometry”.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">

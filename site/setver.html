@@ -32,22 +32,28 @@
   </div></header>
   <div class="layout">
     <nav class="toc"><h2><span data-lang="fr">Sur cette page</span><span data-lang="en">On this page</span></h2>
-      <ol><li><a href="#lie">La table des mensonges</a></li><li><a href="#ah30">AH=30h</a></li><li><a href="#device">DEVICE=SETVER.EXE</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+      <ol><li><a href="#lie">Incorrect DOS version</a></li><li><a href="#ah30">La question AH=30h</a></li><li><a href="#device">DEVICE=SETVER.EXE</a></li><li><a href="#sources">Sources</a></li></ol></nav>
     <main id="main" class="content">
       <header>
         <p class="kicker">cmd/setver/ · dos/msproc.asm Scan_Special_Entries</p>
         <h1>SETVER</h1>
-        <p class="lede" data-lang="fr">Certains programmes refusent de tourner s’ils ne voient pas « DOS 3.3 » ou « 4.0 ». Au lieu de les corriger, DOS leur <em>ment</em>. SETVER tient la liste ; <code>$EXEC</code> la consulte ; <code>$GET_VERSION</code> rend le numéro fictif. Le dépôt cite IBMCACHE et Windows comme clients historiques.</p>
-        <p class="lede" data-lang="en">Some programs refuse to run unless they see “DOS 3.3” or “4.0”. Instead of fixing them, DOS <em>lies</em>. SETVER holds the list; <code>$EXEC</code> consults it; <code>$GET_VERSION</code> returns the fake number. The tree names IBMCACHE and Windows as historic clients.</p>
+        <p class="lede" data-lang="fr">Un vieux programme affiche « Incorrect DOS version » et refuse de partir. Il a été écrit pour le 3.30 ou le 4.00 ; sous le 6.00 il s’arrête tout seul. SETVER ne le corrige pas : il lui <em>ment</em> le numéro de version.</p>
+        <p class="lede" data-lang="en">An old program prints “Incorrect DOS version” and will not start. It was written for 3.30 or 4.00; under 6.00 it bails out. SETVER does not fix it: it <em>lies</em> about the version number.</p>
       </header>
       <section class="topic" id="lie">
-        <h2>Special_Version</h2>
+        <h2>SETVER FOO.EXE 3.30</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span>SETVER FOO.EXE 3.30</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>On ajoute un nom et une version. Au prochain EXEC de ce fichier, AL/AH de INT 21h AH=30h ne seront plus 6.00. Le PSP a même un champ <code>PDB_Version</code> pour figer le mensonge par processus.</p></div>
-            <div data-lang="en"><p>You add a name and a version. On the next EXEC of that file, AL/AH of INT 21h AH=30h will no longer be 6.00. The PSP even has a <code>PDB_Version</code> field to freeze the lie per process.</p></div>
+            <div data-lang="fr">
+              <p>Au lancement, beaucoup d’EXE demandent à DOS : « tu es quelle version ? » Si la réponse n’est pas celle qu’ils attendent, ils s’arrêtent — même s’ils tourneraient très bien.</p>
+              <p><code>SETVER FOO.EXE 3.30</code> ajoute FOO à une liste. Au prochain lancement de FOO seulement, DOS répond « 3.30 ». Les autres voient toujours 6.00. <code>SETVER</code> sans argument affiche la liste ; <code>SETVER FOO.EXE /D</code> retire l’entrée.</p>
+            </div>
+            <div data-lang="en">
+              <p>At startup many EXEs ask DOS: “which version are you?” If the answer is not the one they expect, they stop — even if they would run fine.</p>
+              <p><code>SETVER FOO.EXE 3.30</code> adds FOO to a list. On the next launch of FOO only, DOS answers “3.30”. Everyone else still sees 6.00. Bare <code>SETVER</code> lists the table; <code>SETVER FOO.EXE /D</code> removes the entry.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -68,13 +74,13 @@
         </details>
       </section>
       <section class="topic" id="ah30">
-        <h2>GetVersion</h2>
+        <h2>Où le mensonge est dit</h2>
         <details class="level-block" data-level="discovery" open>
           <summary><span class="badge" data-lang="fr">Découverte</span><span data-lang="en">Discovery</span>
             <span>AH=30h · AH=33h sous-fonctions</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Le numéro « vrai » reste 6.00 pour qui n’est pas sur la liste. Windows et les utilitaires modernes utilisent aussi des sous-fonctions de 33h (M007) pour éviter SETVER.</p></div>
-            <div data-lang="en"><p>The “true” number stays 6.00 for anyone not on the list. Windows and modern utilities also use 33h subfunctions (M007) to avoid SETVER.</p></div>
+            <div data-lang="fr"><p>Cette question, c’est l’appel DOS n° 30h. DOS répond d’habitude 6.00. Si le programme est sur la liste SETVER, la réponse devient le numéro inventé — pour lui seulement. DIR et MEM voient toujours la vérité.</p></div>
+            <div data-lang="en"><p>That question is DOS call 30h. DOS usually answers 6.00. If the program is on the SETVER list, the answer becomes the made-up number — for it only. DIR and MEM still see the truth.</p></div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -100,8 +106,16 @@
             <span data-lang="fr">Un .EXE qui est aussi un pilote</span>
             <span data-lang="en">An .EXE that is also a driver</span></summary>
           <div class="level-body">
-            <div data-lang="fr"><p>Comme HIMEM, on le met dans CONFIG.SYS pour qu’il soit là <em>avant</em> les programmes qui posent la question. En ligne de commande, le même binaire édite la table sur disque.</p></div>
-            <div data-lang="en"><p>Like HIMEM, it goes in CONFIG.SYS so it is there <em>before</em> programs that ask. From the command line the same binary edits the on-disk table.</p></div>
+            <div data-lang="fr">
+              <p>La liste doit être en mémoire <em>avant</em> que FOO.EXE parte. D’où, dans CONFIG.SYS :</p>
+              <pre><code>DEVICE=C:\DOS\SETVER.EXE</code></pre>
+              <p>Le même fichier sert deux fois : au boot, c’est un petit pilote qui tient la table en RAM ; à l’invite, <code>SETVER FOO.EXE 3.30</code> réécrit la table <em>dans</em> SETVER.EXE sur le disque. Au reboot suivant, le pilote recharge ce qui a été gravé.</p>
+            </div>
+            <div data-lang="en">
+              <p>The list must be in memory <em>before</em> FOO.EXE starts. Hence, in CONFIG.SYS:</p>
+              <pre><code>DEVICE=C:\DOS\SETVER.EXE</code></pre>
+              <p>The same file does two jobs: at boot it is a tiny driver that holds the table in RAM; at the prompt, <code>SETVER FOO.EXE 3.30</code> rewrites the table <em>inside</em> SETVER.EXE on disk. On the next reboot the driver reloads what was written.</p>
+            </div>
           </div>
         </details>
         <details class="level-block" data-level="intermediate">
@@ -131,8 +145,8 @@
     </main>
   </div>
   <footer class="site-footer"><div class="site-footer__inner">
-    <p data-lang="fr">Vingt-deux articles. Le site tient maintenant du manuel de bord plus que du prototype.</p>
-    <p data-lang="en">Twenty-two articles. The site is now more of a handbook than a prototype.</p>
+    <p data-lang="fr">Le mensonge est posé au moment d’<a href="exec.html">EXEC</a>. La question passe par <a href="int21.html">INT 21h</a>.</p>
+    <p data-lang="en">The lie is planted at <a href="exec.html">EXEC</a> time. The question goes through <a href="int21.html">INT 21h</a>.</p>
   </div></footer>
   <script src="js/app.js"></script>
 </body>
