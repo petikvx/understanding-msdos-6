@@ -3,7 +3,7 @@
    - Langue : html.lang-fr | html.lang-en  (les nœuds [data-lang] sont masqués)
    - Niveau : html[data-level=discovery|intermediate|technical|all]
    - Chaque bloc de niveau est un <details class="level-block" data-level="…">
-   - Glossaire au survol : .term > .term__tip (une langue, le parent data-lang filtre)
+   - Glossaire : js/glossary.js pose .glos, bulle #glos-pop (hors flux)
 */
 
 :root {
@@ -322,70 +322,62 @@ p:last-child { margin-bottom: 0; }
 
 a { color: var(--accent); }
 
-/* ——— Glossaire au survol ——— */
+/* ——— Glossaire (bulle flottante, hors article) ——— */
 
-.term {
-  position: relative;
-  border-bottom: 1px dotted color-mix(in srgb, var(--accent) 70%, var(--ink));
+.glos {
+  border-bottom: 1px dotted color-mix(in srgb, var(--accent) 55%, transparent);
   cursor: help;
-  text-decoration: none;
-  font-style: inherit;
 }
 
-a.term:hover {
-  border-bottom-style: solid;
-}
-
-.term__tip {
-  display: none;
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 0.4rem);
-  transform: translateX(-50%);
-  z-index: 50;
-  width: max-content;
-  max-width: min(18.5rem, 72vw);
-  padding: 0.5rem 0.65rem;
+#glos-pop {
+  position: fixed;
+  z-index: 80;
+  max-width: min(20rem, calc(100vw - 1.5rem));
+  padding: 0.55rem 0.7rem 0.6rem;
   background: var(--ink);
   color: var(--bg-elev);
-  border-radius: 7px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
-  font-family: var(--font-sans);
-  font-size: 0.82rem;
-  font-weight: 400;
-  font-style: normal;
+  font-size: 0.84rem;
   line-height: 1.4;
-  letter-spacing: 0;
-  text-align: left;
-  text-transform: none;
-  white-space: normal;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
-.term__tip::before {
+#glos-pop[hidden] { display: none; }
+
+#glos-pop strong {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-line);
+  margin-bottom: 0.2rem;
+}
+
+#glos-pop p { margin: 0; }
+
+#glos-pop a {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--accent-line);
+  font-size: 0.78rem;
+}
+
+#glos-pop::before {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: 100%;
+  left: var(--arrow-x, 50%);
+  top: -6px;
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-bottom-color: var(--ink);
 }
 
-.term__tip code {
-  background: transparent;
-  color: var(--accent-line);
-  padding: 0;
-}
-
-.term:hover .term__tip,
-.term:focus .term__tip,
-.term:focus-within .term__tip {
-  display: block;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .term__tip { transition: none; }
+#glos-pop.is-above::before {
+  top: auto;
+  bottom: -6px;
+  border-bottom-color: transparent;
+  border-top-color: var(--ink);
 }
 
 /* ——— Blocs de niveau ——— */

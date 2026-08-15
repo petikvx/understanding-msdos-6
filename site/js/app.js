@@ -41,6 +41,9 @@
     document.documentElement.classList.add("lang-" + lang);
     persist(LANG_KEY, lang);
     setPressed("lang", lang);
+    try {
+      document.dispatchEvent(new CustomEvent("msdos-lang", { detail: lang }));
+    } catch (e) { /* IE oublié */ }
   }
 
   function applyLevel(level) {
@@ -68,6 +71,15 @@
 
   applyLang(initialLang());
   applyLevel(stored(LEVEL_KEY, "discovery"));
+
+  (function loadGlossary() {
+    var here = document.querySelector('script[src*="app.js"]');
+    var src = here && here.getAttribute("src");
+    if (!src) return;
+    var s = document.createElement("script");
+    s.src = src.replace(/app\.js(\?.*)?$/, "glossary.js");
+    document.head.appendChild(s);
+  })();
 
   document.addEventListener("click", function (ev) {
     var btn = ev.target.closest("[data-set]");
