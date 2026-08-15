@@ -1545,7 +1545,6 @@ h2 .src-all {
 .src-gutter a {
   color: inherit;
   text-decoration: none;
-  display: block;
 }
 
 .src-gutter a:hover, .src-gutter a.is-target { color: var(--accent-line); }
